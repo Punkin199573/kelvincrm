@@ -1,86 +1,149 @@
+import { Check } from "lucide-react"
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { CheckCircle } from "lucide-react"
-import Link from "next/link"
+
+const tiers = [
+  {
+    name: "Frost Fan",
+    price: "$9.99",
+    description: "Perfect for casual fans who want a taste of the experience",
+    features: [
+      "Access to select exclusive content",
+      "Fan community access",
+      "Monthly newsletter",
+      "Early access to ticket sales",
+    ],
+    cta: "Join Now",
+    href: "/join?tier=fan",
+    popular: false,
+    theme: "frost",
+  },
+  {
+    name: "Blizzard VIP",
+    price: "$19.99",
+    description: "For dedicated fans who want the full experience",
+    features: [
+      "All Frost Fan benefits",
+      "Full access to exclusive content",
+      "Exclusive merchandise discounts",
+      "Monthly virtual meetups",
+      "Birthday message from the artist",
+    ],
+    cta: "Become a VIP",
+    href: "/join?tier=vip",
+    popular: true,
+    theme: "electric",
+  },
+  {
+    name: "Avalanche",
+    price: "$49.99",
+    description: "The ultimate fan experience with premium perks",
+    features: [
+      "All Blizzard VIP benefits",
+      "Backstage pass for one concert per year",
+      "Personalized video messages",
+      "Limited edition merchandise",
+      "Priority access to all events",
+      "Quarterly private livestream",
+    ],
+    cta: "Go Backstage",
+    href: "/join?tier=backstage",
+    popular: false,
+    theme: "metal",
+  },
+]
 
 export function MembershipTiers() {
-  const tiers = [
-    {
-      name: "Guest",
-      price: "Free",
-      description: "Basic access to public content and store.",
-      features: ["Access to public blog posts", "Browse merchandise store", "Receive general newsletters"],
-      buttonText: "Sign Up Free",
-      link: "/signup",
-    },
-    {
-      name: "Fan",
-      price: "$5/month",
-      description: "Enhanced access for dedicated fans.",
-      features: [
-        "All Guest features",
-        "Early access to concert tickets",
-        "Exclusive fan-only polls",
-        "Digital fan badge",
-      ],
-      buttonText: "Join Fan Tier",
-      link: "/join?tier=fan",
-    },
-    {
-      name: "Premium",
-      price: "$15/month",
-      description: "Full access to all exclusive content and perks.",
-      features: [
-        "All Fan features",
-        "Exclusive video content",
-        "Monthly live Q&A with Kelvin",
-        "Priority access to meet & greets",
-        "Premium digital badge",
-      ],
-      buttonText: "Go Premium",
-      link: "/join?tier=premium",
-    },
-  ]
-
   return (
-    <section className="py-12 md:py-24 lg:py-32 bg-kelvin-background">
-      <div className="container px-4 md:px-6">
-        <div className="flex flex-col items-center justify-center space-y-4 text-center mb-8">
-          <div className="space-y-2">
-            <h2 className="text-3xl font-bold tracking-tighter sm:text-5xl">Membership Tiers</h2>
-            <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-              Choose the perfect membership to unlock exclusive content and perks.
-            </p>
+    <div className="grid gap-6 pt-8 lg:grid-cols-3 lg:gap-8">
+      {tiers.map((tier, index) => (
+        <Card
+          key={tier.name}
+          className={`flex flex-col relative overflow-hidden ${
+            tier.popular
+              ? "border-primary shadow-lg shadow-primary/20 scale-105 fire-card dark:ice-card"
+              : index === 0
+                ? "ember-card dark:metal-card"
+                : "fire-card dark:ice-card"
+          }`}
+        >
+          {tier.popular && (
+            <div className="absolute -top-4 left-0 right-0 flex justify-center">
+              <span className="bg-gradient-fire dark:bg-gradient-electric text-white text-sm font-medium py-1 px-3 rounded-full animate-fire-pulse dark:animate-electric-pulse">
+                Most Popular
+              </span>
+            </div>
+          )}
+
+          {/* Theme effects */}
+          <div className="absolute inset-0 opacity-10 pointer-events-none">
+            <div
+              className={`absolute inset-0 blur-[50px] animate-pulse ${
+                index === 0
+                  ? "bg-ember-500 dark:bg-frost-700"
+                  : index === 1
+                    ? "bg-fire-500 dark:bg-electric-500"
+                    : "bg-fire-700 dark:bg-electric-700"
+              }`}
+              style={{
+                animationDelay: `${index * 0.7}s`,
+              }}
+            />
           </div>
-        </div>
-        <div className="mx-auto grid max-w-5xl items-start gap-6 py-12 lg:grid-cols-3 lg:gap-12">
-          {tiers.map((tier) => (
-            <Card key={tier.name} className="flex flex-col bg-card/50 backdrop-blur-sm border-kelvin-border">
-              <CardHeader className="text-center">
-                <CardTitle className="text-2xl font-bold text-kelvin-foreground">{tier.name}</CardTitle>
-                <CardDescription className="text-kelvin-muted-foreground">{tier.description}</CardDescription>
-                <p className="text-4xl font-bold text-kelvin-primary mt-4">{tier.price}</p>
-              </CardHeader>
-              <CardContent className="flex-grow space-y-2 p-6">
-                {tier.features.map((feature) => (
-                  <div key={feature} className="flex items-center text-kelvin-foreground">
-                    <CheckCircle className="mr-2 h-5 w-5 text-green-500" />
-                    <span>{feature}</span>
-                  </div>
-                ))}
-              </CardContent>
-              <CardFooter className="p-6 pt-0">
-                <Button
-                  className="w-full bg-kelvin-secondary text-kelvin-secondary-foreground hover:bg-kelvin-secondary/90"
-                  asChild
-                >
-                  <Link href={tier.link}>{tier.buttonText}</Link>
-                </Button>
-              </CardFooter>
-            </Card>
-          ))}
-        </div>
-      </div>
-    </section>
+
+          <CardHeader className="relative z-10">
+            <CardTitle
+              className={`text-2xl ${
+                index === 0
+                  ? "ember-text dark:frost-text"
+                  : index === 1
+                    ? "fire-text dark:electric-text"
+                    : "fire-text dark:metal-text"
+              }`}
+            >
+              {tier.name}
+            </CardTitle>
+            <div className="flex items-baseline text-2xl font-bold mt-2">
+              <span className="text-primary">{tier.price}</span>
+              <span className="ml-1 text-sm font-normal text-muted-foreground">/month</span>
+            </div>
+            <CardDescription>{tier.description}</CardDescription>
+          </CardHeader>
+
+          <CardContent className="flex-1 relative z-10">
+            <ul className="space-y-2 text-sm">
+              {tier.features.map((feature) => (
+                <li key={feature} className="flex items-center">
+                  <Check
+                    className={`mr-2 h-4 w-4 ${
+                      index === 0
+                        ? "text-ember-400 dark:text-frost-400"
+                        : index === 1
+                          ? "text-fire-400 dark:text-electric-400"
+                          : "text-fire-300 dark:text-electric-300"
+                    }`}
+                  />
+                  <span>{feature}</span>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+
+          <CardFooter className="relative z-10">
+            <Button
+              asChild
+              className={`w-full rounded-full ${
+                tier.popular
+                  ? "bg-gradient-fire dark:bg-gradient-electric hover:animate-fire-pulse dark:hover:animate-electric-pulse"
+                  : "bg-background hover:bg-fire-900/50 dark:hover:bg-electric-900/50 border border-fire-500/40 dark:border-electric-500/40 hover:border-fire-400/70 dark:hover:border-electric-400/70"
+              }`}
+            >
+              <Link href={tier.href}>{tier.cta}</Link>
+            </Button>
+          </CardFooter>
+        </Card>
+      ))}
+    </div>
   )
 }

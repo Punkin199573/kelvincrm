@@ -17,25 +17,15 @@ export async function POST(request: NextRequest) {
       contactInfo,
       specialRequests,
       preferredTime,
-      roomUrl,
-      userQuestion,
-      date,
-      time,
     } = body
 
-    if (!userEmail || (!userName && !date && !time) || !roomUrl) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
-    }
-
     const isPrivateSession =
-      sessionType?.includes("WHATSAPP") || sessionType?.includes("FACETIME") || sessionType?.includes("Private")
+      sessionType.includes("WHATSAPP") || sessionType.includes("FACETIME") || sessionType.includes("Private")
 
     const { data, error } = await resend.emails.send({
-      from: "Kelvin Creekman Fan Club <onboarding@resend.dev>", // Replace with your verified Resend domain
+      from: "Kelvin Creekman Fan Club <noreply@kelvincreekman.com>",
       to: [userEmail],
-      subject: isPrivateSession
-        ? `Meet & Greet Confirmation: ${userName}`
-        : `Meet & Greet Session Confirmation: ${date} at ${time}`,
+      subject: `Meet & Greet Confirmation: ${sessionType}`,
       html: `
         <!DOCTYPE html>
         <html>
@@ -163,7 +153,7 @@ export async function POST(request: NextRequest) {
               <h1 class="title">Meet & Greet Confirmed!</h1>
             </div>
             
-            <p>Hey ${userName || "Fan"}! 🎸</p>
+            <p>Hey ${userName}! 🎸</p>
             
             ${
               isPrivateSession
@@ -187,21 +177,21 @@ export async function POST(request: NextRequest) {
                 <span class="detail-value">${sessionType}</span>
               </div>
               ${
-                sessionDate || date
+                sessionDate
                   ? `
               <div class="detail-row">
                 <span class="detail-label">Date:</span>
-                <span class="detail-value">${sessionDate || date}</span>
+                <span class="detail-value">${sessionDate}</span>
               </div>
               `
                   : ""
               }
               ${
-                sessionTime || time
+                sessionTime
                   ? `
               <div class="detail-row">
                 <span class="detail-label">Time:</span>
-                <span class="detail-value">${sessionTime || time}</span>
+                <span class="detail-value">${sessionTime}</span>
               </div>
               `
                   : ""
@@ -246,11 +236,6 @@ export async function POST(request: NextRequest) {
               `
                   : ""
               }
-              <div class="detail-row">
-                <span class="detail-label">Join Link:</span>
-                <span class="detail-value"><a href="${roomUrl}">${roomUrl}</a></span>
-              </div>
-              ${userQuestion ? `<div class="detail-row"><span class="detail-label">Your Question:</span><span class="detail-value">${userQuestion}</span></div>` : ""}
             </div>
             
             ${
@@ -275,9 +260,9 @@ export async function POST(request: NextRequest) {
                 <li>Make sure your device is charged and you have a stable internet connection</li>
                 <li>Find a quiet, well-lit space for the best experience</li>
                 <li>Prepare any questions or topics you'd like to discuss</li>
-                ${sessionType?.includes("WHATSAPP") ? "<li>Ensure your WhatsApp is updated and working properly</li>" : ""}
-                ${sessionType?.includes("FACETIME") ? "<li>Make sure your Apple ID is set up correctly for FaceTime</li>" : ""}
-                ${sessionType?.includes("video") ? "<li>We'll send you a secure video link before the session</li>" : ""}
+                ${sessionType.includes("WHATSAPP") ? "<li>Ensure your WhatsApp is updated and working properly</li>" : ""}
+                ${sessionType.includes("FACETIME") ? "<li>Make sure your Apple ID is set up correctly for FaceTime</li>" : ""}
+                ${sessionType.includes("video") ? "<li>We'll send you a secure video link before the session</li>" : ""}
               </ul>
             </div>
             `

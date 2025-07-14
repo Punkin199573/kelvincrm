@@ -1,88 +1,85 @@
-"use client"
-
 import Image from "next/image"
 import Link from "next/link"
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Play, Lock } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { PlayCircle, BookOpen, Headphones, ImageIcon } from "lucide-react"
-import { useAuth } from "./auth/auth-provider"
 
-interface ContentItem {
-  id: number
-  title: string
-  type: "video" | "blog" | "audio" | "gallery" | "text"
-  category: string
-  image: string
-  description: string
-  isPremium: boolean
-}
+const exclusiveContent = [
+  {
+    id: 1,
+    title: "Studio Session: New Album Sneak Peek",
+    description: "Watch exclusive footage from the recording of the upcoming album",
+    image: "/placeholder.svg?height=400&width=600",
+    type: "video",
+    duration: "12:34",
+    date: "2 days ago",
+    locked: true,
+  },
+  {
+    id: 2,
+    title: "Behind the Scenes: World Tour Preparation",
+    description: "See what goes into preparing for a global tour",
+    image: "/placeholder.svg?height=400&width=600",
+    type: "video",
+    duration: "8:45",
+    date: "1 week ago",
+    locked: true,
+  },
+  {
+    id: 3,
+    title: "Photo Gallery: Summer Festival Highlights",
+    description: "Exclusive photos from this summer's festival performances",
+    image: "/placeholder.svg?height=400&width=600",
+    type: "gallery",
+    count: "24 photos",
+    date: "2 weeks ago",
+    locked: false,
+  },
+]
 
-interface ContentPreviewProps {
-  content: ContentItem[]
-}
-
-export function ContentPreview({ content }: ContentPreviewProps) {
-  const { user } = useAuth()
-
-  const getIcon = (type: ContentItem["type"]) => {
-    switch (type) {
-      case "video":
-        return <PlayCircle className="h-5 w-5" />
-      case "blog":
-      case "text":
-        return <BookOpen className="h-5 w-5" />
-      case "audio":
-        return <Headphones className="h-5 w-5" />
-      case "gallery":
-        return <ImageIcon className="h-5 w-5" />
-      default:
-        return null
-    }
-  }
-
-  const canAccess = (item: ContentItem) => {
-    if (!item.isPremium) {
-      return true // Public content is always accessible
-    }
-    // Premium content requires 'premium' or 'admin' role
-    return user?.user_metadata?.role === "premium" || user?.user_metadata?.role === "admin"
-  }
-
+export function ContentPreview() {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 flex-1">
-      {content.map((item) => (
-        <Card key={item.id} className="flex flex-col">
-          <CardHeader className="p-0">
-            <div className="relative w-full h-48">
-              <Image
-                src={item.image || "/placeholder.svg"}
-                alt={item.title}
-                layout="fill"
-                objectFit="cover"
-                className="rounded-t-lg"
-              />
-              {item.isPremium && (
-                <Badge className="absolute top-2 left-2 bg-primary text-primary-foreground">Premium</Badge>
-              )}
-              <div className="absolute bottom-2 right-2 bg-background/70 backdrop-blur-sm text-foreground px-2 py-1 rounded-md text-sm flex items-center gap-1">
-                {getIcon(item.type)}
-                {item.type.charAt(0).toUpperCase() + item.type.slice(1)}
+    <div className="grid gap-6 pt-8 md:grid-cols-2 lg:grid-cols-3">
+      {exclusiveContent.map((content) => (
+        <Card key={content.id} className="overflow-hidden group">
+          <div className="relative aspect-video">
+            <Image
+              src={content.image || "/placeholder.svg"}
+              alt={content.title}
+              fill
+              className="object-cover transition-all group-hover:scale-105"
+            />
+            {content.locked ? (
+              <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                <Lock className="h-12 w-12 text-white opacity-80" />
               </div>
-            </div>
+            ) : content.type === "video" ? (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Button size="icon" variant="secondary" className="rounded-full h-12 w-12">
+                  <Play className="h-6 w-6" />
+                </Button>
+              </div>
+            ) : null}
+            <Badge className="absolute top-2 right-2">
+              {content.type === "video" ? content.duration : content.count}
+            </Badge>
+          </div>
+          <CardHeader className="p-4">
+            <CardTitle className="text-lg line-clamp-1">{content.title}</CardTitle>
+            <CardDescription className="line-clamp-2">{content.description}</CardDescription>
           </CardHeader>
-          <CardContent className="flex-grow p-4">
-            <CardTitle className="text-lg font-semibold mb-2">{item.title}</CardTitle>
-            <p className="text-muted-foreground text-sm line-clamp-2">{item.description}</p>
-          </CardContent>
-          <CardFooter className="p-4 pt-0">
-            <Button className="w-full" asChild disabled={!canAccess(item)}>
-              {canAccess(item) ? (
-                <Link href={`/content/${item.id}`}>View Content</Link>
-              ) : (
-                <Link href="/join">Unlock with Premium</Link>
-              )}
-            </Button>
+          <CardFooter className="p-4 pt-0 flex justify-between items-center">
+            <span className="text-xs text-muted-foreground">{content.date}</span>
+            {content.locked ? (
+              <Button asChild size="sm" variant="outline" className="rounded-full">
+                <Link href="/join">Unlock</Link>
+              </Button>
+            ) : (
+              <Button asChild size="sm" className="rounded-full">
+                <Link href={`/content/${content.id}`}>View</Link>
+              </Button>
+            )}
           </CardFooter>
         </Card>
       ))}

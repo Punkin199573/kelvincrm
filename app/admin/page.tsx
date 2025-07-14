@@ -1,13 +1,16 @@
-import { AdminProtection } from "@/components/admin/admin-protection"
+import type { Metadata } from "next"
 import { AdminDashboard } from "@/components/admin/admin-dashboard"
+import { AdminProtection } from "@/components/admin/admin-protection"
+
+export const metadata: Metadata = {
+  title: "Admin Dashboard | Kelvin Creekman Fan Club",
+  description: "Admin dashboard for managing the fan club",
+}
 
 export default function AdminPage() {
   return (
-    <AdminProtection requiredRole="admin">
-      <div className="container mx-auto py-8 px-4 md:px-6">
-        <h1 className="text-4xl font-bold mb-8 text-center">Admin Dashboard</h1>
-        <AdminDashboard />
-      </div>
+    <AdminProtection>
+      <AdminDashboard />
     </AdminProtection>
   )
 }

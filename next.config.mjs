@@ -10,15 +10,27 @@ const nextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: '**.supabase.co',
+        hostname: 'images.unsplash.com',
       },
       {
         protocol: 'https',
-        hostname: '**.v0.dev',
+        hostname: 'blob.v0.dev',
+      },
+      {
+        protocol: 'https',
+        hostname: 'placeholder.com',
       },
     ],
     unoptimized: true,
   },
-};
+  experimental: {
+    serverActions: {
+      allowedOrigins: ['localhost:3000', '*.vercel.app'],
+    },
+  },
+  env: {
+    CUSTOM_KEY: 'kelvin-creekman-fan-club',
+  },
+}
 
-export default nextConfig;
+export default nextConfig

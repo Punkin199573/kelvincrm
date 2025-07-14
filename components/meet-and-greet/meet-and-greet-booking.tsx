@@ -1,10 +1,9 @@
 "use client"
 
-import { CardDescription } from "@/components/ui/card"
 import { useState } from "react"
 import { Calendar } from "@/components/ui/calendar"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -24,13 +23,7 @@ import {
   CheckCircle,
 } from "lucide-react"
 import { useAuth } from "@/components/auth/auth-provider"
-import { toast } from "@/hooks/use-toast"
-import { createClient } from "@/lib/supabase/client"
-import { useRouter } from "next/navigation"
-import { format } from "date-fns"
-import { DailyVideoCall } from "./daily-video-call"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { useToast } from "@/hooks/use-toast"
 
 interface TimeSlot {
   id: string
@@ -49,20 +42,6 @@ interface PrivateSession {
   price: number
   tierRequired: "blizzard" | "avalanche"
   description: string
-}
-
-interface Session {
-  id: string
-  date: Date
-  time: string
-  isBooked: boolean
-  attendees: number
-  maxAttendees: number
-}
-
-interface MeetAndGreetBookingProps {
-  session: Session
-  onJoinCall: () => void
 }
 
 const timeSlots: TimeSlot[] = [
@@ -131,12 +110,10 @@ const privateSessions: PrivateSession[] = [
   },
 ]
 
-export function MeetAndGreetBooking({ session, onJoinCall }: MeetAndGreetBookingProps) {
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined)
-  const [selectedTime, setSelectedTime] = useState<string>("")
-  const [loading, setLoading] = useState(false)
-  const { user, loading: authLoading } = useAuth()
-  const router = useRouter()
+export function MeetAndGreetBooking() {
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date())
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState<TimeSlot | null>(null)
+  const [selectedPrivateSession, setSelectedPrivateSession] = useState<PrivateSession | null>(null)
   const [isBooking, setIsBooking] = useState(false)
   const [activeTab, setActiveTab] = useState("group")
   const [formData, setFormData] = useState({
@@ -148,10 +125,8 @@ export function MeetAndGreetBooking({ session, onJoinCall }: MeetAndGreetBooking
     specialRequests: "",
     preferredTime: "",
   })
-  const supabase = createClient()
-  const [roomUrl, setRoomUrl] = useState<string | null>(null)
-
-  const availableTimes = ["10:00 AM", "11:00 AM", "01:00 PM", "02:00 PM", "03:00 PM"] // Mock times
+  const { user } = useAuth()
+  const { toast } = useToast()
 
   const getTierBadge = (tier: string) => {
     switch (tier) {
@@ -197,7 +172,7 @@ export function MeetAndGreetBooking({ session, onJoinCall }: MeetAndGreetBooking
   }
 
   const handleGroupBooking = async () => {
-    if (!selectedDate || !selectedTime || !user) {
+    if (!selectedTimeSlot || !selectedDate || !user) {
       toast({
         title: "Booking Error",
         description: "Please select a date, time slot, and ensure you're logged in.",
@@ -224,7 +199,7 @@ export function MeetAndGreetBooking({ session, onJoinCall }: MeetAndGreetBooking
         id: Math.random().toString(36).substr(2, 9),
         type: "group",
         date: selectedDate,
-        timeSlot: selectedTime,
+        timeSlot: selectedTimeSlot,
         userId: user.id,
         userInfo: formData,
         status: "confirmed",
@@ -240,7 +215,7 @@ export function MeetAndGreetBooking({ session, onJoinCall }: MeetAndGreetBooking
           userName: formData.name,
           userEmail: formData.email,
           sessionDate: selectedDate.toLocaleDateString(),
-          sessionTime: selectedTime,
+          sessionTime: selectedTimeSlot.time,
           sessionType: "Group Meet & Greet Video Call",
           specialRequests: formData.specialRequests,
         }),
@@ -248,7 +223,7 @@ export function MeetAndGreetBooking({ session, onJoinCall }: MeetAndGreetBooking
 
       toast({
         title: "Group Session Booked! 🎸",
-        description: `Your meet & greet session is booked for ${selectedDate.toLocaleDateString()} at ${selectedTime}. Check your email for details!`,
+        description: `Your meet & greet session is booked for ${selectedDate.toLocaleDateString()} at ${selectedTimeSlot.time}. Check your email for details!`,
       })
 
       setFormData({
@@ -260,7 +235,7 @@ export function MeetAndGreetBooking({ session, onJoinCall }: MeetAndGreetBooking
         specialRequests: "",
         preferredTime: "",
       })
-      setSelectedTime("")
+      setSelectedTimeSlot(null)
     } catch (error) {
       toast({
         title: "Booking Failed",
@@ -273,10 +248,10 @@ export function MeetAndGreetBooking({ session, onJoinCall }: MeetAndGreetBooking
   }
 
   const handlePrivateBooking = async () => {
-    if (!selectedDate || !selectedTime || !user) {
+    if (!selectedPrivateSession || !user) {
       toast({
         title: "Booking Error",
-        description: "Please select a date, time slot, and ensure you're logged in.",
+        description: "Please select a session type and ensure you're logged in.",
         variant: "destructive",
       })
       return
@@ -291,6 +266,25 @@ export function MeetAndGreetBooking({ session, onJoinCall }: MeetAndGreetBooking
       return
     }
 
+    // Validate required contact info based on session type
+    if (selectedPrivateSession.type === "whatsapp" && !formData.whatsappNumber) {
+      toast({
+        title: "WhatsApp Number Required",
+        description: "Please provide your WhatsApp number for the session.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (selectedPrivateSession.type === "facetime" && !formData.appleId) {
+      toast({
+        title: "Apple ID Required",
+        description: "Please provide your Apple ID for the FaceTime session.",
+        variant: "destructive",
+      })
+      return
+    }
+
     setIsBooking(true)
 
     try {
@@ -299,8 +293,7 @@ export function MeetAndGreetBooking({ session, onJoinCall }: MeetAndGreetBooking
       const booking = {
         id: Math.random().toString(36).substr(2, 9),
         type: "private",
-        date: selectedDate,
-        timeSlot: selectedTime,
+        session: selectedPrivateSession,
         userId: user.id,
         userInfo: formData,
         status: "confirmed",
@@ -315,16 +308,18 @@ export function MeetAndGreetBooking({ session, onJoinCall }: MeetAndGreetBooking
         body: JSON.stringify({
           userName: formData.name,
           userEmail: formData.email,
-          sessionDate: selectedDate.toLocaleDateString(),
-          sessionTime: selectedTime,
-          sessionType: "Private Session",
+          sessionType: `Private ${selectedPrivateSession.type.toUpperCase()} Session`,
+          sessionDuration: `${selectedPrivateSession.duration} minutes`,
+          sessionPrice: `$${selectedPrivateSession.price}`,
+          contactInfo: selectedPrivateSession.type === "whatsapp" ? formData.whatsappNumber : formData.appleId,
           specialRequests: formData.specialRequests,
+          preferredTime: formData.preferredTime,
         }),
       })
 
       toast({
         title: "Private Session Booked! 🔥",
-        description: `Your private session has been booked for ${selectedDate.toLocaleDateString()} at ${selectedTime}. Kelvin will contact you within 24 hours!`,
+        description: `Your private ${selectedPrivateSession.type} session has been booked. Kelvin will contact you within 24 hours!`,
       })
 
       setFormData({
@@ -336,7 +331,7 @@ export function MeetAndGreetBooking({ session, onJoinCall }: MeetAndGreetBooking
         specialRequests: "",
         preferredTime: "",
       })
-      setSelectedTime("")
+      setSelectedPrivateSession(null)
     } catch (error) {
       toast({
         title: "Booking Failed",
@@ -354,152 +349,6 @@ export function MeetAndGreetBooking({ session, onJoinCall }: MeetAndGreetBooking
     return (
       tierHierarchy[userTier as keyof typeof tierHierarchy] >= tierHierarchy[requiredTier as keyof typeof tierHierarchy]
     )
-  }
-
-  const handleConfirmBooking = async () => {
-    setIsBooking(true)
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-
-    if (!user) {
-      toast({
-        title: "Authentication Required",
-        description: "Please log in to book a meet & greet session.",
-        variant: "destructive",
-      })
-      router.push("/login")
-      setIsBooking(false)
-      return
-    }
-
-    if (session.isBooked || session.attendees >= session.maxAttendees) {
-      toast({
-        title: "Session Unavailable",
-        description: "This session is already booked or full.",
-        variant: "destructive",
-      })
-      setIsBooking(false)
-      return
-    }
-
-    try {
-      // Simulate booking process
-      await new Promise((resolve) => setTimeout(resolve, 1500))
-
-      // In a real application, you would update the database to mark the session as booked
-      // and increment attendees count. For this mock, we'll just proceed.
-
-      // Call API route to create Daily room and send confirmation email
-      const response = await fetch("/api/create-daily-room", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          sessionId: session.id,
-          userEmail: user.email,
-          userName: user.user_metadata?.full_name || user.email,
-          sessionDate: format(session.date, "PPP"),
-          sessionTime: session.time,
-        }),
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || "Failed to create Daily room or send confirmation email")
-      }
-
-      const { roomUrl } = await response.json()
-
-      toast({
-        title: "Booking Confirmed!",
-        description: `You are booked for the meet & greet on ${format(session.date, "PPP")} at ${session.time}. A confirmation email with the video call link has been sent.`,
-        variant: "success",
-      })
-
-      // Optionally, store the roomUrl in state or context to pass to DailyVideoCall
-      // For now, we'll just trigger the onJoinCall which assumes a fixed room name
-      onJoinCall()
-    } catch (error: any) {
-      toast({
-        title: "Booking Failed",
-        description: error.message || "There was an error confirming your booking. Please try again.",
-        variant: "destructive",
-      })
-    } finally {
-      setIsBooking(false)
-    }
-  }
-
-  const handleBooking = async () => {
-    if (authLoading) return
-
-    if (!user) {
-      toast({
-        title: "Authentication Required",
-        description: "Please log in to book a meet & greet session.",
-        variant: "destructive",
-      })
-      router.push("/login")
-      return
-    }
-
-    // Meet & Greet sessions are premium content
-    if (user.user_metadata?.role !== "premium" && user.user_metadata?.role !== "admin") {
-      toast({
-        title: "Premium Access Required",
-        description: "Meet & Greet sessions are exclusive to premium members. Please upgrade your membership.",
-        variant: "destructive",
-      })
-      router.push("/join") // Redirect to membership page
-      return
-    }
-
-    if (!selectedDate || !selectedTime) {
-      toast({
-        title: "Missing Information",
-        description: "Please select both a date and a time for your session.",
-        variant: "destructive",
-      })
-      return
-    }
-
-    setLoading(true)
-    try {
-      // Simulate API call for booking
-      const response = await fetch("/api/send-meetgreet-confirmation", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          date: selectedDate.toISOString().split("T")[0],
-          time: selectedTime,
-          userEmail: user.email,
-        }),
-      })
-
-      if (!response.ok) {
-        throw new Error("Failed to book session")
-      }
-
-      toast({
-        title: "Session Booked!",
-        description: `Your meet & greet session on ${format(selectedDate, "PPP")} at ${selectedTime} has been confirmed. A confirmation email has been sent.`,
-        variant: "default",
-      })
-      setSelectedDate(undefined)
-      setSelectedTime("")
-    } catch (error: any) {
-      toast({
-        title: "Booking Failed",
-        description: error.message || "There was an error processing your booking. Please try again.",
-        variant: "destructive",
-      })
-    } finally {
-      setLoading(false)
-    }
   }
 
   return (
@@ -577,17 +426,13 @@ export function MeetAndGreetBooking({ session, onJoinCall }: MeetAndGreetBooking
                 <CardDescription>Choose a date for your meet & greet session</CardDescription>
               </CardHeader>
               <CardContent>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant={"outline"} className="w-full justify-start text-left font-normal">
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar mode="single" selected={selectedDate} onSelect={setSelectedDate} initialFocus />
-                  </PopoverContent>
-                </Popover>
+                <Calendar
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={setSelectedDate}
+                  disabled={(date) => date < new Date() || date > new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)}
+                  className="rounded-md border border-electric-700/30"
+                />
               </CardContent>
             </Card>
 
@@ -606,22 +451,45 @@ export function MeetAndGreetBooking({ session, onJoinCall }: MeetAndGreetBooking
               </CardHeader>
               <CardContent className="space-y-4">
                 {selectedDate ? (
-                  <Select value={selectedTime} onValueChange={setSelectedTime}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select a time" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {timeSlots.map((slot) => (
-                        <SelectItem
-                          key={slot.id}
-                          value={slot.time}
-                          disabled={!slot.available || !canBookTier(slot.tierRequired)}
-                        >
-                          {slot.time}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  timeSlots.map((slot) => (
+                    <div
+                      key={slot.id}
+                      className={`p-4 rounded-lg border transition-all cursor-pointer ${
+                        selectedTimeSlot?.id === slot.id
+                          ? "border-electric-500 bg-electric-500/10"
+                          : slot.available && canBookTier(slot.tierRequired)
+                            ? "border-electric-700/30 hover:border-electric-500/50 hover:bg-electric-500/5"
+                            : "border-gray-700/30 bg-gray-500/5 cursor-not-allowed opacity-50"
+                      }`}
+                      onClick={() => {
+                        if (slot.available && canBookTier(slot.tierRequired)) {
+                          setSelectedTimeSlot(slot)
+                        }
+                      }}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          {getTierIcon(slot.tierRequired)}
+                          <div>
+                            <div className="font-semibold text-lg">{slot.time}</div>
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <Users className="h-4 w-4" />
+                              {slot.currentParticipants}/{slot.maxParticipants} participants
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex flex-col items-end gap-2">
+                          {getTierBadge(slot.tierRequired)}
+                          {!slot.available && <Badge variant="destructive">Full</Badge>}
+                          {!canBookTier(slot.tierRequired) && (
+                            <Badge variant="outline" className="text-yellow-400 border-yellow-400/50">
+                              Upgrade Required
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))
                 ) : (
                   <div className="text-center py-8 text-muted-foreground">
                     <CalendarIcon className="h-12 w-12 mx-auto mb-4 opacity-50" />
@@ -633,7 +501,7 @@ export function MeetAndGreetBooking({ session, onJoinCall }: MeetAndGreetBooking
           </div>
 
           {/* Group Booking Summary */}
-          {selectedDate && selectedTime && formData.name && formData.email && (
+          {selectedDate && selectedTimeSlot && formData.name && formData.email && (
             <Card className="border-electric-700/30 bg-background/50 backdrop-blur-lg">
               <CardHeader>
                 <CardTitle className="text-electric-400">Group Session Summary</CardTitle>
@@ -647,25 +515,24 @@ export function MeetAndGreetBooking({ session, onJoinCall }: MeetAndGreetBooking
                   </div>
                   <div className="text-center p-4 rounded-lg bg-electric-500/10 border border-electric-500/30">
                     <Clock className="h-8 w-8 mx-auto mb-2 text-electric-400" />
-                    <div className="font-semibold">{selectedTime}</div>
+                    <div className="font-semibold">{selectedTimeSlot.time}</div>
                     <div className="text-sm text-muted-foreground">Time</div>
                   </div>
                   <div className="text-center p-4 rounded-lg bg-electric-500/10 border border-electric-500/30">
                     <Users className="h-8 w-8 mx-auto mb-2 text-electric-400" />
                     <div className="font-semibold">
-                      {timeSlots.find((slot) => slot.time === selectedTime)?.currentParticipants + 1 || 0}/
-                      {timeSlots.find((slot) => slot.time === selectedTime)?.maxParticipants || 0}
+                      {selectedTimeSlot.currentParticipants + 1}/{selectedTimeSlot.maxParticipants}
                     </div>
                     <div className="text-sm text-muted-foreground">Participants</div>
                   </div>
                 </div>
                 <Button
                   onClick={handleGroupBooking}
-                  disabled={loading || authLoading || !user}
+                  disabled={isBooking || !user}
                   className="w-full bg-gradient-electric hover:animate-electric-pulse"
                   size="lg"
                 >
-                  {loading ? "Booking..." : user ? "Confirm Group Session" : "Sign In to Book"}
+                  {isBooking ? "Booking..." : user ? "Confirm Group Session" : "Sign In to Book"}
                 </Button>
               </CardContent>
             </Card>
@@ -680,7 +547,7 @@ export function MeetAndGreetBooking({ session, onJoinCall }: MeetAndGreetBooking
               <Card
                 key={session.id}
                 className={`cursor-pointer transition-all border-2 ${
-                  selectedTime === session.id
+                  selectedPrivateSession?.id === session.id
                     ? "border-electric-500 bg-electric-500/10"
                     : canBookTier(session.tierRequired)
                       ? "border-electric-700/30 hover:border-electric-500/50"
@@ -688,7 +555,7 @@ export function MeetAndGreetBooking({ session, onJoinCall }: MeetAndGreetBooking
                 }`}
                 onClick={() => {
                   if (canBookTier(session.tierRequired)) {
-                    setSelectedTime(session.id)
+                    setSelectedPrivateSession(session)
                   }
                 }}
               >
@@ -736,12 +603,12 @@ export function MeetAndGreetBooking({ session, onJoinCall }: MeetAndGreetBooking
           </div>
 
           {/* Private Session Form */}
-          {selectedTime && (
+          {selectedPrivateSession && (
             <Card className="border-electric-700/30 bg-background/50 backdrop-blur-lg">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-electric-400">
-                  {getSessionIcon(selectedTime)}
-                  Private Session Details
+                  {getSessionIcon(selectedPrivateSession.type)}
+                  Private {selectedPrivateSession.type.toUpperCase()} Session Details
                 </CardTitle>
                 <CardDescription>
                   Fill in your details for the private session. Kelvin will contact you within 24 hours to schedule.
@@ -772,7 +639,7 @@ export function MeetAndGreetBooking({ session, onJoinCall }: MeetAndGreetBooking
                   </div>
                 </div>
 
-                {selectedTime === "whatsapp" && (
+                {selectedPrivateSession.type === "whatsapp" && (
                   <div className="space-y-2">
                     <Label htmlFor="whatsapp">WhatsApp Number (with country code)</Label>
                     <Input
@@ -785,7 +652,7 @@ export function MeetAndGreetBooking({ session, onJoinCall }: MeetAndGreetBooking
                   </div>
                 )}
 
-                {selectedTime === "facetime" && (
+                {selectedPrivateSession.type === "facetime" && (
                   <div className="space-y-2">
                     <Label htmlFor="appleid">Apple ID (Email or Phone)</Label>
                     <Input
@@ -826,41 +693,33 @@ export function MeetAndGreetBooking({ session, onJoinCall }: MeetAndGreetBooking
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
                       <span className="text-muted-foreground">Type:</span>
-                      <span className="ml-2 capitalize">
-                        {privateSessions.find((s) => s.id === selectedTime)?.type}
-                      </span>
+                      <span className="ml-2 capitalize">{selectedPrivateSession.type}</span>
                     </div>
                     <div>
                       <span className="text-muted-foreground">Duration:</span>
-                      <span className="ml-2">
-                        {privateSessions.find((s) => s.id === selectedTime)?.duration} minutes
-                      </span>
+                      <span className="ml-2">{selectedPrivateSession.duration} minutes</span>
                     </div>
                     <div>
                       <span className="text-muted-foreground">Price:</span>
-                      <span className="ml-2 font-semibold text-electric-400">
-                        ${privateSessions.find((s) => s.id === selectedTime)?.price}
-                      </span>
+                      <span className="ml-2 font-semibold text-electric-400">${selectedPrivateSession.price}</span>
                     </div>
                     <div>
                       <span className="text-muted-foreground">Tier:</span>
-                      <span className="ml-2 capitalize">
-                        {privateSessions.find((s) => s.id === selectedTime)?.tierRequired}
-                      </span>
+                      <span className="ml-2 capitalize">{selectedPrivateSession.tierRequired}</span>
                     </div>
                   </div>
                 </div>
 
                 <Button
                   onClick={handlePrivateBooking}
-                  disabled={loading || authLoading || !user}
+                  disabled={isBooking || !user}
                   className="w-full bg-gradient-electric hover:animate-electric-pulse"
                   size="lg"
                 >
-                  {loading
+                  {isBooking
                     ? "Booking..."
                     : user
-                      ? `Book ${privateSessions.find((s) => s.id === selectedTime)?.type.toUpperCase()} Session - $${privateSessions.find((s) => s.id === selectedTime)?.price}`
+                      ? `Book ${selectedPrivateSession.type.toUpperCase()} Session - $${selectedPrivateSession.price}`
                       : "Sign In to Book"}
                 </Button>
               </CardContent>
@@ -868,25 +727,6 @@ export function MeetAndGreetBooking({ session, onJoinCall }: MeetAndGreetBooking
           )}
         </TabsContent>
       </Tabs>
-
-      {roomUrl && (
-        <div className="mt-4 p-4 border rounded-md bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-200">
-          <p className="font-semibold mb-2">Your session is booked!</p>
-          <p>You can join the call using this link:</p>
-          <a
-            href={roomUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-blue-600 hover:underline break-all"
-          >
-            {roomUrl}
-          </a>
-          <p className="mt-2">Please check your email for confirmation and the meeting link.</p>
-          <div className="mt-4">
-            <DailyVideoCall roomName={roomUrl.split("/").pop() || ""} userName={formData.name} />
-          </div>
-        </div>
-      )}
     </div>
   )
 }

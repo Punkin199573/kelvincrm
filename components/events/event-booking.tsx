@@ -1,125 +1,226 @@
 "use client"
 
+import type React from "react"
+
 import { useState } from "react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { toast } from "@/components/ui/use-toast"
-import { useAuth } from "@/components/auth/auth-provider"
-import { useRouter } from "next/navigation"
+import { Textarea } from "@/components/ui/textarea"
+import { Badge } from "@/components/ui/badge"
+import { Separator } from "@/components/ui/separator"
+import { CreditCard, Shield, Star } from "lucide-react"
+import { toast } from "sonner"
+
+interface Event {
+  id: string
+  title: string
+  price: number
+  memberPrice: number
+  tier: string
+  maxAttendees: number
+  currentAttendees: number
+}
 
 interface EventBookingProps {
-  event: {
-    id: string
-    title: string
-    ticketPrice: number
-    isPremium: boolean
-  }
+  event: Event
 }
 
 export function EventBooking({ event }: EventBookingProps) {
-  const [quantity, setQuantity] = useState(1)
-  const [loading, setLoading] = useState(false)
-  const { user, loading: authLoading } = useAuth()
-  const router = useRouter()
+  const [isBooking, setIsBooking] = useState(false)
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    specialRequests: "",
+  })
+
+  const isMember = true // This would come from auth context
+  const currentPrice = isMember ? event.memberPrice : event.price
+  const savings = event.price - event.memberPrice
+  const spotsLeft = event.maxAttendees - event.currentAttendees
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setFormData((prev) => ({
+      ...prev,
+      [e.target.name]: e.target.value,
+    }))
+  }
 
   const handleBooking = async () => {
-    if (authLoading) return
-
-    if (!user) {
-      toast({
-        title: "Authentication Required",
-        description: "Please log in to book tickets.",
-        variant: "destructive",
-      })
-      router.push("/login")
+    if (!formData.name || !formData.email) {
+      toast.error("Please fill in all required fields")
       return
     }
 
-    if (event.isPremium && user.user_metadata?.role !== "premium" && user.user_metadata?.role !== "admin") {
-      toast({
-        title: "Premium Access Required",
-        description: "This is a premium event. Please upgrade your membership to book tickets.",
-        variant: "destructive",
-      })
-      router.push("/join") // Redirect to membership page
-      return
-    }
+    setIsBooking(true)
 
-    setLoading(true)
     try {
-      // Simulate API call for booking
+      // Send booking confirmation email
       const response = await fetch("/api/send-event-confirmation", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          eventId: event.id,
-          eventName: event.title,
-          quantity,
-          totalPrice: (event.ticketPrice * quantity).toFixed(2),
-          userEmail: user.email,
+          eventTitle: event.title,
+          userName: formData.name,
+          userEmail: formData.email,
+          eventDate: "2024-02-15", // This would come from event data
+          eventTime: "20:00",
+          eventLocation: "The Electric Theater, Los Angeles",
+          price: currentPrice,
+          specialRequests: formData.specialRequests,
         }),
       })
 
-      if (!response.ok) {
-        throw new Error("Failed to book event")
+      if (response.ok) {
+        toast.success("Booking confirmed! Check your email for details.")
+        // Reset form
+        setFormData({
+          name: "",
+          email: "",
+          phone: "",
+          specialRequests: "",
+        })
+      } else {
+        toast.error("Failed to send confirmation email")
       }
-
-      toast({
-        title: "Booking Confirmed!",
-        description: `You have successfully booked ${quantity} ticket(s) for ${event.title}. A confirmation email has been sent.`,
-        variant: "default",
-      })
-    } catch (error: any) {
-      toast({
-        title: "Booking Failed",
-        description: error.message || "There was an error processing your booking. Please try again.",
-        variant: "destructive",
-      })
+    } catch (error) {
+      toast.error("Booking failed. Please try again.")
     } finally {
-      setLoading(false)
+      setIsBooking(false)
     }
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <Label htmlFor="quantity" className="text-lg">
-          Quantity
-        </Label>
-        <Select value={String(quantity)} onValueChange={(value) => setQuantity(Number(value))}>
-          <SelectTrigger className="w-[100px]">
-            <SelectValue placeholder="1" />
-          </SelectTrigger>
-          <SelectContent>
-            {[1, 2, 3, 4, 5].map((num) => (
-              <SelectItem key={num} value={String(num)}>
-                {num}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="flex items-center justify-between text-xl font-bold">
-        <span>Total:</span>
-        <span>${(event.ticketPrice * quantity).toFixed(2)}</span>
-      </div>
-      <Button onClick={handleBooking} className="w-full" disabled={loading || authLoading}>
-        {loading
-          ? "Booking..."
-          : event.isPremium &&
-              (!user || (user.user_metadata?.role !== "premium" && user.user_metadata?.role !== "admin"))
-            ? "Upgrade to Premium"
-            : "Book Now"}
-      </Button>
-      {event.isPremium &&
-        (!user || (user.user_metadata?.role !== "premium" && user.user_metadata?.role !== "admin")) && (
-          <p className="text-sm text-center text-muted-foreground">
-            This is a premium event. Upgrade your membership to gain access.
-          </p>
-        )}
+    <div className="space-y-6">
+      {/* Pricing Card */}
+      <Card className="bg-slate-800/50 backdrop-blur-sm border-slate-700">
+        <CardHeader>
+          <CardTitle className="text-white flex items-center gap-2">
+            <CreditCard className="h-5 w-5" />
+            Event Pricing
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-slate-300">Regular Price</span>
+              <span className="text-slate-400 line-through">${event.price}</span>
+            </div>
+            {isMember && (
+              <>
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-300 flex items-center gap-2">
+                    <Star className="h-4 w-4 text-yellow-400" />
+                    Member Price
+                  </span>
+                  <span className="text-green-400 font-bold">${event.memberPrice}</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-slate-400">You Save</span>
+                  <span className="text-green-400">${savings}</span>
+                </div>
+              </>
+            )}
+          </div>
+
+          <Separator className="bg-slate-700" />
+
+          <div className="flex items-center justify-between text-lg font-bold">
+            <span className="text-white">Total</span>
+            <span className="text-blue-400">${currentPrice}</span>
+          </div>
+
+          {spotsLeft <= 10 && (
+            <Badge variant="destructive" className="w-full justify-center">
+              Only {spotsLeft} spots left!
+            </Badge>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Booking Form */}
+      <Card className="bg-slate-800/50 backdrop-blur-sm border-slate-700">
+        <CardHeader>
+          <CardTitle className="text-white">Book Your Spot</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="name" className="text-slate-300">
+              Full Name *
+            </Label>
+            <Input
+              id="name"
+              name="name"
+              value={formData.name}
+              onChange={handleInputChange}
+              className="bg-slate-700/50 border-slate-600 text-white"
+              placeholder="Enter your full name"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="email" className="text-slate-300">
+              Email Address *
+            </Label>
+            <Input
+              id="email"
+              name="email"
+              type="email"
+              value={formData.email}
+              onChange={handleInputChange}
+              className="bg-slate-700/50 border-slate-600 text-white"
+              placeholder="Enter your email"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="phone" className="text-slate-300">
+              Phone Number
+            </Label>
+            <Input
+              id="phone"
+              name="phone"
+              type="tel"
+              value={formData.phone}
+              onChange={handleInputChange}
+              className="bg-slate-700/50 border-slate-600 text-white"
+              placeholder="Enter your phone number"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="specialRequests" className="text-slate-300">
+              Special Requests
+            </Label>
+            <Textarea
+              id="specialRequests"
+              name="specialRequests"
+              value={formData.specialRequests}
+              onChange={handleInputChange}
+              className="bg-slate-700/50 border-slate-600 text-white"
+              placeholder="Any special accommodations or requests?"
+              rows={3}
+            />
+          </div>
+
+          <Button
+            onClick={handleBooking}
+            disabled={isBooking || spotsLeft === 0}
+            className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white"
+          >
+            {isBooking ? "Processing..." : spotsLeft === 0 ? "Sold Out" : `Book Now - $${currentPrice}`}
+          </Button>
+
+          <div className="flex items-center gap-2 text-sm text-slate-400">
+            <Shield className="h-4 w-4" />
+            <span>Secure booking with instant confirmation</span>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }

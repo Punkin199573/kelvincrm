@@ -1,178 +1,263 @@
-"use client"
-
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { useAuth } from "@/components/auth/auth-provider"
-import { Loader2, Crown, Star, Zap, ShoppingBag, Calendar, BookOpen, MessageCircle } from "lucide-react"
+import Image from "next/image"
 import Link from "next/link"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Badge } from "@/components/ui/badge"
+import { Progress } from "@/components/ui/progress"
+import { CalendarDays, Gift, Music, Star, Trophy, Video } from "lucide-react"
 
 export default function DashboardPage() {
-  const { user, loading } = useAuth()
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">
-        <Loader2 className="h-8 w-8 animate-spin" />
-        <span className="sr-only">Loading...</span>
-      </div>
-    )
-  }
-
-  if (!user) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-4rem)] p-4 text-center">
-        <h1 className="text-3xl font-bold mb-4">Access Denied</h1>
-        <p className="text-lg text-muted-foreground mb-6">Please log in to view your dashboard.</p>
-        <Button asChild>
-          <Link href="/login">Go to Login</Link>
-        </Button>
-      </div>
-    )
-  }
-
-  const userRole = user.user_metadata?.role || "fan" // Default to 'fan' if role is not set
-
-  const getTierIcon = (role: string) => {
-    switch (role) {
-      case "guest":
-        return null
-      case "fan":
-        return <Star className="h-5 w-5 text-blue-400" />
-      case "premium":
-        return <Zap className="h-5 w-5 text-purple-400" />
-      case "admin":
-        return <Crown className="h-5 w-5 text-gold-400" />
-      default:
-        return null
-    }
-  }
-
-  const getTierName = (role: string) => {
-    switch (role) {
-      case "guest":
-        return "Guest"
-      case "fan":
-        return "Frost Fan"
-      case "premium":
-        return "Blizzard VIP"
-      case "admin":
-        return "Avalanche Elite (Admin)"
-      default:
-        return "Unknown Tier"
-    }
+  // This would normally be fetched from an API
+  const user = {
+    name: "Sarah",
+    membershipTier: "VIP",
+    points: 1250,
+    nextLevel: 2000,
+    level: 3,
+    badges: [
+      { name: "Early Supporter", icon: Star },
+      { name: "Concert Goer", icon: Music },
+      { name: "Content Creator", icon: Video },
+    ],
+    upcomingEvents: [
+      {
+        id: 1,
+        title: "Album Release Party",
+        date: "June 15, 2025",
+      },
+      {
+        id: 2,
+        title: "Virtual Acoustic Session",
+        date: "July 3, 2025",
+      },
+    ],
+    recentContent: [
+      {
+        id: 1,
+        title: "Studio Session: New Album Sneak Peek",
+        type: "video",
+        date: "2 days ago",
+        image: "/placeholder.svg?height=400&width=600",
+      },
+      {
+        id: 2,
+        title: "Behind the Scenes: World Tour Preparation",
+        type: "video",
+        date: "1 week ago",
+        image: "/placeholder.svg?height=400&width=600",
+      },
+    ],
   }
 
   return (
-    <div className="container mx-auto py-8">
-      <h1 className="text-4xl font-bold mb-8 text-center">Welcome, {user.email}!</h1>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <Card className="bg-background/50 backdrop-blur-lg border-electric-700/30">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-electric-200">Your Membership Tier</CardTitle>
-            {getTierIcon(userRole)}
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold text-frost-300">{getTierName(userRole)}</p>
-            <p className="text-xs text-muted-foreground mt-1">
-              {userRole === "guest" && "Sign up or upgrade to unlock more features!"}
-              {userRole === "fan" && "Enjoy basic fan benefits. Consider upgrading for more!"}
-              {userRole === "premium" && "You have access to exclusive content and priority features!"}
-              {userRole === "admin" && "You have full administrative privileges."}
+    <div className="container py-10">
+      <div className="flex flex-col gap-8">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Welcome back, {user.name}!</h1>
+            <p className="text-muted-foreground">
+              Your {user.membershipTier} membership is active. Here's what's new for you.
             </p>
-            {userRole === "fan" && (
-              <Button asChild className="mt-4 bg-gradient-electric hover:animate-electric-pulse">
-                <Link href="/join">Upgrade Membership</Link>
-              </Button>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="bg-background/50 backdrop-blur-lg border-electric-700/30">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-electric-200">Recent Orders</CardTitle>
-            <ShoppingBag className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">No recent orders</p>
-            <p className="text-xs text-muted-foreground">Check out the latest merchandise!</p>
-            <Button asChild className="mt-4 bg-gradient-electric hover:animate-electric-pulse">
-              <Link href="/store">Go to Store</Link>
+          </div>
+          <div className="flex gap-2">
+            <Button asChild variant="outline" className="rounded-full">
+              <Link href="/account">Manage Account</Link>
             </Button>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-background/50 backdrop-blur-lg border-electric-700/30">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-electric-200">Upcoming Events</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">No upcoming events booked</p>
-            <p className="text-xs text-muted-foreground">Find exciting events to join.</p>
-            <Button asChild className="mt-4 bg-gradient-electric hover:animate-electric-pulse">
-              <Link href="/events">View Events</Link>
+            <Button asChild className="rounded-full">
+              <Link href="/content">Browse Content</Link>
             </Button>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        <Card className="bg-background/50 backdrop-blur-lg border-electric-700/30">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-electric-200">Exclusive Content</CardTitle>
-            <BookOpen className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">Access your premium content.</p>
-            <p className="text-xs text-muted-foreground">Dive into behind-the-scenes and more.</p>
-            <Button asChild className="mt-4 bg-gradient-electric hover:animate-electric-pulse">
-              <Link href="/content">View Content</Link>
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-background/50 backdrop-blur-lg border-electric-700/30">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-electric-200">Community Hub</CardTitle>
-            <MessageCircle className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">Connect with other fans.</p>
-            <p className="text-xs text-muted-foreground">Join discussions and make new friends.</p>
-            <Button asChild className="mt-4 bg-gradient-electric hover:animate-electric-pulse">
-              <Link href="/community">Go to Community</Link>
-            </Button>
-          </CardContent>
-        </Card>
-
-        import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import Link from "next/link"
-import { Crown } from "lucide-react"
-
-export default function DashboardPage() {
-  // Mock user role - in real app this would come from auth context
-  const userRole = "admin"
-
-  return (
-    <div className="container mx-auto py-8 px-4 md:px-6">
-      <h1 className="text-4xl font-bold mb-8 text-center">Dashboard</h1>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {userRole === "admin" && (
-          <Card className="bg-background/50 backdrop-blur-lg border-electric-700/30">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-electric-200">Admin Panel</CardTitle>
-              <Crown className="h-4 w-4 text-muted-foreground" />
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg">Membership Status</CardTitle>
+              <CardDescription>Your current membership benefits</CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-bold">Manage the fan club website.</p>
-              <p className="text-xs text-muted-foreground">Access all administrative functionalities.</p>
-              <Button asChild className="mt-4 bg-gradient-electric hover:animate-electric-pulse">
-                <Link href="/admin">Go to Admin</Link>
-              </Button>
+              <div className="flex items-center justify-between">
+                <Badge className="bg-primary px-3 py-1 text-lg">{user.membershipTier}</Badge>
+                <Link href="/tiers" className="text-sm text-primary underline-offset-4 hover:underline">
+                  View all tiers
+                </Link>
+              </div>
+              <div className="mt-4 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>Fan Level {user.level}</span>
+                  <span>
+                    {user.points} / {user.nextLevel} points
+                  </span>
+                </div>
+                <Progress value={(user.points / user.nextLevel) * 100} className="h-2" />
+                <p className="text-xs text-muted-foreground">
+                  Earn {user.nextLevel - user.points} more points to reach Level {user.level + 1}
+                </p>
+              </div>
             </CardContent>
+            <CardFooter className="border-t pt-4">
+              <div className="flex flex-wrap gap-2">
+                {user.badges.map((badge, index) => (
+                  <div key={index} className="flex items-center gap-1 rounded-full bg-muted px-2 py-1 text-xs">
+                    <badge.icon className="h-3 w-3" />
+                    <span>{badge.name}</span>
+                  </div>
+                ))}
+              </div>
+            </CardFooter>
           </Card>
-        )}
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg">Upcoming Events</CardTitle>
+              <CardDescription>Events you're registered for</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {user.upcomingEvents.map((event) => (
+                <div key={event.id} className="flex items-start gap-3">
+                  <CalendarDays className="h-5 w-5 text-primary mt-0.5" />
+                  <div>
+                    <h4 className="font-medium">{event.title}</h4>
+                    <p className="text-sm text-muted-foreground">{event.date}</p>
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+            <CardFooter className="border-t pt-4">
+              <Button asChild variant="outline" className="w-full rounded-full">
+                <Link href="/events">View All Events</Link>
+              </Button>
+            </CardFooter>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg">Fan Rewards</CardTitle>
+              <CardDescription>Redeem your points for exclusive rewards</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-start gap-3">
+                <Gift className="h-5 w-5 text-primary mt-0.5" />
+                <div>
+                  <h4 className="font-medium">Signed Poster</h4>
+                  <p className="text-sm text-muted-foreground">500 points</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <Trophy className="h-5 w-5 text-primary mt-0.5" />
+                <div>
+                  <h4 className="font-medium">Virtual Meet & Greet</h4>
+                  <p className="text-sm text-muted-foreground">1,500 points</p>
+                </div>
+              </div>
+            </CardContent>
+            <CardFooter className="border-t pt-4">
+              <Button asChild className="w-full rounded-full">
+                <Link href="/rewards">View All Rewards</Link>
+              </Button>
+            </CardFooter>
+          </Card>
+        </div>
+
+        <Tabs defaultValue="recent" className="w-full">
+          <TabsList className="grid w-full max-w-md grid-cols-2">
+            <TabsTrigger value="recent">Recent Content</TabsTrigger>
+            <TabsTrigger value="recommended">Recommended</TabsTrigger>
+          </TabsList>
+          <TabsContent value="recent" className="mt-6">
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {user.recentContent.map((content) => (
+                <Card key={content.id} className="overflow-hidden group">
+                  <div className="relative aspect-video">
+                    <Image
+                      src={content.image || "/placeholder.svg"}
+                      alt={content.title}
+                      fill
+                      className="object-cover transition-all group-hover:scale-105"
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <Button size="icon" variant="secondary" className="rounded-full h-12 w-12">
+                        <Video className="h-6 w-6" />
+                      </Button>
+                    </div>
+                  </div>
+                  <CardHeader className="p-4">
+                    <CardTitle className="text-lg line-clamp-1">{content.title}</CardTitle>
+                    <CardDescription>{content.date}</CardDescription>
+                  </CardHeader>
+                  <CardFooter className="p-4 pt-0">
+                    <Button asChild size="sm" className="w-full rounded-full">
+                      <Link href={`/content/${content.id}`}>Watch Now</Link>
+                    </Button>
+                  </CardFooter>
+                </Card>
+              ))}
+              <Card className="flex flex-col items-center justify-center p-6 border-dashed">
+                <Button asChild variant="outline" className="rounded-full">
+                  <Link href="/content">View All Content</Link>
+                </Button>
+              </Card>
+            </div>
+          </TabsContent>
+          <TabsContent value="recommended" className="mt-6">
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              <Card className="overflow-hidden group">
+                <div className="relative aspect-video">
+                  <Image
+                    src="/placeholder.svg?height=400&width=600"
+                    alt="Recommended content"
+                    fill
+                    className="object-cover transition-all group-hover:scale-105"
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <Button size="icon" variant="secondary" className="rounded-full h-12 w-12">
+                      <Video className="h-6 w-6" />
+                    </Button>
+                  </div>
+                </div>
+                <CardHeader className="p-4">
+                  <CardTitle className="text-lg line-clamp-1">Acoustic Performance: Unplugged</CardTitle>
+                  <CardDescription>Based on your interests</CardDescription>
+                </CardHeader>
+                <CardFooter className="p-4 pt-0">
+                  <Button asChild size="sm" className="w-full rounded-full">
+                    <Link href="/content/recommended/1">Watch Now</Link>
+                  </Button>
+                </CardFooter>
+              </Card>
+              <Card className="overflow-hidden group">
+                <div className="relative aspect-video">
+                  <Image
+                    src="/placeholder.svg?height=400&width=600"
+                    alt="Recommended content"
+                    fill
+                    className="object-cover transition-all group-hover:scale-105"
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <Button size="icon" variant="secondary" className="rounded-full h-12 w-12">
+                      <Music className="h-6 w-6" />
+                    </Button>
+                  </div>
+                </div>
+                <CardHeader className="p-4">
+                  <CardTitle className="text-lg line-clamp-1">Exclusive Track: Early Demo</CardTitle>
+                  <CardDescription>New release for VIP members</CardDescription>
+                </CardHeader>
+                <CardFooter className="p-4 pt-0">
+                  <Button asChild size="sm" className="w-full rounded-full">
+                    <Link href="/content/recommended/2">Listen Now</Link>
+                  </Button>
+                </CardFooter>
+              </Card>
+              <Card className="flex flex-col items-center justify-center p-6 border-dashed">
+                <Button asChild variant="outline" className="rounded-full">
+                  <Link href="/recommendations">View All Recommendations</Link>
+                </Button>
+              </Card>
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   )

@@ -60,71 +60,67 @@ export function StoreBanner() {
   const memberInfo = userTier ? memberBenefits[userTier] : null
 
   return (
-    <section className="relative bg-gradient-to-r from-kelvin-primary to-kelvin-secondary py-12 text-kelvin-primary-foreground md:py-24 lg:py-32 overflow-hidden">
-      <div className="container px-4 md:px-6 text-center relative z-10">
-        {/* Member Benefits Banner */}
-        {user && memberInfo ? (
-          <Card className={`${memberInfo.bgColor} ${memberInfo.borderColor} border-2`}>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className={`p-3 rounded-full ${memberInfo.bgColor} ${memberInfo.borderColor} border`}>
-                    <memberInfo.icon className={`h-6 w-6 ${memberInfo.color}`} />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-bold">
-                      Welcome back, {userTier.charAt(0).toUpperCase() + userTier.slice(1)} Member!
-                    </h3>
-                    <p className="text-muted-foreground">
-                      You get <span className={`font-bold ${memberInfo.color}`}>{memberInfo.discount}% off</span> all
-                      merchandise
-                    </p>
-                  </div>
+    <div className="space-y-6">
+      {/* Member Benefits Banner */}
+      {user && memberInfo ? (
+        <Card className={`${memberInfo.bgColor} ${memberInfo.borderColor} border-2`}>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className={`p-3 rounded-full ${memberInfo.bgColor} ${memberInfo.borderColor} border`}>
+                  <memberInfo.icon className={`h-6 w-6 ${memberInfo.color}`} />
                 </div>
-                <Badge
-                  className={`${memberInfo.bgColor} ${memberInfo.color} ${memberInfo.borderColor} border text-lg px-4 py-2`}
-                >
-                  {memberInfo.discount}% OFF
-                </Badge>
+                <div>
+                  <h3 className="text-xl font-bold">
+                    Welcome back, {userTier.charAt(0).toUpperCase() + userTier.slice(1)} Member!
+                  </h3>
+                  <p className="text-muted-foreground">
+                    You get <span className={`font-bold ${memberInfo.color}`}>{memberInfo.discount}% off</span> all
+                    merchandise
+                  </p>
+                </div>
               </div>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="w-full bg-gradient-to-r from-electric-600 to-frost-600 text-white p-6 mb-8 text-center shadow-lg">
-            <h2 className="text-3xl font-bold mb-2">Exclusive Merchandise</h2>
-            <p className="mx-auto max-w-[700px] text-kelvin-primary-foreground/90 md:text-xl mt-4">
-              Gear up with official Kelvin Creekman apparel, accessories, and collectibles. Limited stock available!
-            </p>
-            <div className="mt-8">
-              <Button
-                asChild
-                className="bg-kelvin-primary-foreground text-kelvin-primary hover:bg-kelvin-primary-foreground/90"
+              <Badge
+                className={`${memberInfo.bgColor} ${memberInfo.color} ${memberInfo.borderColor} border text-lg px-4 py-2`}
               >
-                <Link href="/store">Shop Now</Link>
+                {memberInfo.discount}% OFF
+              </Badge>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card className="bg-gradient-to-r from-fire-500/10 to-ember-500/10 dark:from-electric-500/10 dark:to-frost-500/10 border-fire-500/30 dark:border-electric-500/30">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-xl font-bold mb-2">Join the Fan Club for Exclusive Discounts!</h3>
+                <p className="text-muted-foreground">
+                  Get up to 30% off merchandise, free shipping, and access to limited edition items
+                </p>
+              </div>
+              <Button asChild className="bg-gradient-fire dark:bg-gradient-electric">
+                <Link href="/join">
+                  Join Now
+                  <Star className="ml-2 h-4 w-4" />
+                </Link>
               </Button>
             </div>
-          </div>
-        )}
+          </CardContent>
+        </Card>
+      )}
 
-        {/* Store Features */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-8">
-          {storeFeatures.map((feature, index) => (
-            <Card key={index} className="border-electric-700/30 bg-background/50 backdrop-blur-lg">
-              <CardContent className="p-4 text-center">
-                <feature.icon className="h-8 w-8 mx-auto mb-2 text-electric-400" />
-                <h4 className="font-semibold mb-1">{feature.title}</h4>
-                <p className="text-sm text-muted-foreground">{feature.description}</p>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+      {/* Store Features */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {storeFeatures.map((feature, index) => (
+          <Card key={index} className="border-electric-700/30 bg-background/50 backdrop-blur-lg">
+            <CardContent className="p-4 text-center">
+              <feature.icon className="h-8 w-8 mx-auto mb-2 text-electric-400" />
+              <h4 className="font-semibold mb-1">{feature.title}</h4>
+              <p className="text-sm text-muted-foreground">{feature.description}</p>
+            </CardContent>
+          </Card>
+        ))}
       </div>
-      {/* Abstract shapes for icy/electrifying feel */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-48 h-48 bg-white/10 rounded-full mix-blend-overlay animate-blob filter blur-xl" />
-        <div className="absolute top-1/2 right-1/4 w-64 h-64 bg-electric-purple/10 rounded-full mix-blend-overlay animate-blob animation-delay-2000 filter blur-xl" />
-        <div className="absolute bottom-1/4 left-1/2 w-56 h-56 bg-ice-blue/10 rounded-full mix-blend-overlay animate-blob animation-delay-4000 filter blur-xl" />
-      </div>
-    </section>
+    </div>
   )
 }

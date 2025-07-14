@@ -1,86 +1,128 @@
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import Image from "next/image"
 import Link from "next/link"
+import { Button } from "@/components/ui/button"
+import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+
+const merchandise = [
+  {
+    id: 1,
+    name: "Ice Storm Vinyl",
+    description: "Limited edition signed vinyl with exclusive frosted artwork",
+    price: 49.99,
+    image: "/placeholder.svg?height=400&width=400",
+    exclusive: true,
+    inStock: true,
+  },
+  {
+    id: 2,
+    name: "Frozen Kingdom Tour Hoodie",
+    description: "Premium quality hoodie with 2025 tour dates and electric print",
+    price: 59.99,
+    image: "/placeholder.svg?height=400&width=400",
+    exclusive: true,
+    inStock: true,
+  },
+  {
+    id: 3,
+    name: "Avalanche Photobook",
+    description: "Hardcover photobook with never-before-seen images from the ice caves sessions",
+    price: 39.99,
+    image: "/placeholder.svg?height=400&width=400",
+    exclusive: false,
+    inStock: false,
+  },
+]
 
 export function FeaturedMerchandise() {
-  const featuredProducts = [
-    {
-      id: "1",
-      name: "Kelvin Creekman T-Shirt",
-      price: 25.0,
-      image: "/merch/kelvin-tshirt.webp",
-      description: "Show your support with this official Kelvin Creekman t-shirt.",
-    },
-    {
-      id: "2",
-      name: "Electric Dreams Beanie",
-      price: 20.0,
-      image: "/merch/beanie.jpg",
-      description: "Stay warm with the 'Electric Dreams' album beanie.",
-    },
-    {
-      id: "3",
-      name: "Kelvin Creekman Mug (Black)",
-      price: 15.0,
-      image: "/merch/mug-black.webp",
-      description: "Enjoy your coffee in this sleek black Kelvin Creekman mug.",
-    },
-  ]
-
   return (
-    <section className="py-12 md:py-24 lg:py-32 bg-kelvin-card">
-      <div className="container px-4 md:px-6">
-        <div className="flex flex-col items-center justify-center space-y-4 text-center mb-8">
-          <div className="space-y-2">
-            <h2 className="text-3xl font-bold tracking-tighter sm:text-5xl text-kelvin-foreground">
-              Featured Merchandise
-            </h2>
-            <p className="max-w-[900px] text-kelvin-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-              Grab exclusive gear and show your love for Kelvin Creekman.
-            </p>
+    <div className="grid gap-6 pt-8 md:grid-cols-2 lg:grid-cols-3">
+      {merchandise.map((item, index) => (
+        <Card
+          key={item.id}
+          className={`overflow-hidden group relative ${
+            index === 0
+              ? "ember-card dark:ice-card"
+              : index === 1
+                ? "fire-card dark:metal-card"
+                : "fire-card dark:ice-card"
+          }`}
+        >
+          {/* Theme effects */}
+          <div className="absolute inset-0 opacity-5 pointer-events-none">
+            <div
+              className={`absolute inset-0 blur-[30px] animate-pulse ${
+                index === 0
+                  ? "bg-ember-400 dark:bg-frost-400"
+                  : index === 1
+                    ? "bg-fire-400 dark:bg-electric-400"
+                    : "bg-fire-500 dark:bg-electric-500"
+              }`}
+            />
           </div>
-        </div>
-        <div className="mx-auto grid max-w-5xl items-start gap-6 py-12 lg:grid-cols-3 lg:gap-12">
-          {featuredProducts.map((product) => (
-            <Card key={product.id} className="flex flex-col bg-card/50 backdrop-blur-sm border-kelvin-border">
-              <CardHeader className="p-0">
-                <div className="relative w-full h-60">
-                  <Image
-                    src={product.image || "/placeholder.svg"}
-                    alt={product.name}
-                    layout="fill"
-                    objectFit="cover"
-                    className="rounded-t-lg"
-                  />
-                </div>
-              </CardHeader>
-              <CardContent className="flex-grow p-4">
-                <CardTitle className="text-lg font-semibold mb-2 text-kelvin-foreground">{product.name}</CardTitle>
-                <p className="text-kelvin-muted-foreground text-sm line-clamp-2">{product.description}</p>
-                <p className="text-xl font-bold mt-2 text-kelvin-foreground">${product.price.toFixed(2)}</p>
-              </CardContent>
-              <CardFooter className="p-4 pt-0">
-                <Button
-                  className="w-full bg-kelvin-primary text-kelvin-primary-foreground hover:bg-kelvin-primary/90"
-                  asChild
+
+          <div className="relative aspect-square bg-muted">
+            <Image
+              src={item.image || "/placeholder.svg"}
+              alt={item.name}
+              fill
+              className="object-cover transition-all group-hover:scale-105"
+            />
+            {item.exclusive && (
+              <Badge className="absolute top-2 right-2 bg-gradient-fire dark:bg-gradient-electric animate-fire-pulse dark:animate-electric-pulse">
+                Ice Legion Exclusive
+              </Badge>
+            )}
+            {!item.inStock && (
+              <div className="absolute inset-0 bg-background/80 flex items-center justify-center">
+                <Badge
+                  variant="outline"
+                  className="text-lg font-semibold px-4 py-2 border-fire-500/50 text-fire-300 dark:border-electric-500/50 dark:text-electric-300"
                 >
-                  <Link href="/store">View Product</Link>
-                </Button>
-              </CardFooter>
-            </Card>
-          ))}
-        </div>
-        <div className="text-center mt-8">
-          <Button
-            asChild
-            variant="outline"
-            className="bg-kelvin-background text-kelvin-foreground border-kelvin-border hover:bg-kelvin-muted"
-          >
-            <Link href="/store">View All Merchandise</Link>
-          </Button>
-        </div>
-      </div>
-    </section>
+                  Coming Soon
+                </Badge>
+              </div>
+            )}
+          </div>
+
+          <CardHeader className="p-4 relative z-10">
+            <CardTitle
+              className={`text-lg ${
+                index === 0
+                  ? "ember-text dark:frost-text"
+                  : index === 1
+                    ? "fire-text dark:metal-text"
+                    : "fire-text dark:electric-text"
+              }`}
+            >
+              {item.name}
+            </CardTitle>
+            <CardDescription>{item.description}</CardDescription>
+          </CardHeader>
+
+          <CardFooter className="p-4 pt-0 flex justify-between items-center relative z-10">
+            <span className="font-bold text-primary">${item.price.toFixed(2)}</span>
+            {item.inStock ? (
+              <Button
+                asChild
+                size="sm"
+                className="rounded-full bg-gradient-fire dark:bg-gradient-electric hover:animate-fire-pulse dark:hover:animate-electric-pulse"
+              >
+                <Link href={`/store/product/${item.id}`}>{item.exclusive ? "Members Buy" : "Buy Now"}</Link>
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                variant="outline"
+                className="rounded-full border-fire-500/50 hover:border-fire-400 dark:border-electric-500/50 dark:hover:border-electric-400 bg-transparent"
+                disabled
+              >
+                Notify Me
+              </Button>
+            )}
+          </CardFooter>
+        </Card>
+      ))}
+    </div>
   )
 }
