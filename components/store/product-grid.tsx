@@ -8,19 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { useCart } from "@/components/store/cart-context"
 import { useToast } from "@/hooks/use-toast"
 import { ShoppingCart, Star } from "lucide-react"
-
-interface Product {
-  id: string
-  name: string
-  description: string
-  price: number
-  image: string
-  category: string
-  inStock: boolean
-  isExclusive: boolean
-  sizes: string[]
-  colors: string[]
-}
+import type { Product } from "@/lib/supabase/client"
 
 interface ProductGridProps {
   products: Product[]
@@ -40,7 +28,7 @@ export function ProductGrid({ products }: ProductGridProps) {
       id: product.id,
       name: product.name,
       price: product.price,
-      image: product.image,
+      image: product.image_url,
     })
 
     toast({
@@ -74,6 +62,20 @@ export function ProductGrid({ products }: ProductGridProps) {
         >
           Accessories
         </Button>
+        <Button
+          variant={selectedCategory === "music" ? "default" : "outline"}
+          onClick={() => setSelectedCategory("music")}
+          className={selectedCategory === "music" ? "bg-gradient-fire dark:bg-gradient-ice" : ""}
+        >
+          Music
+        </Button>
+        <Button
+          variant={selectedCategory === "collectibles" ? "default" : "outline"}
+          onClick={() => setSelectedCategory("collectibles")}
+          className={selectedCategory === "collectibles" ? "bg-gradient-fire dark:bg-gradient-ice" : ""}
+        >
+          Collectibles
+        </Button>
       </div>
 
       {/* Product Grid */}
@@ -86,18 +88,18 @@ export function ProductGrid({ products }: ProductGridProps) {
             <CardHeader className="p-0">
               <div className="relative aspect-square overflow-hidden rounded-t-lg">
                 <Image
-                  src={product.image || "/placeholder.svg"}
+                  src={product.image_url || "/placeholder.svg"}
                   alt={product.name}
                   fill
                   className="object-cover group-hover:scale-105 transition-transform duration-300"
                 />
-                {product.isExclusive && (
+                {product.is_exclusive && (
                   <Badge className="absolute top-3 right-3 bg-fire-500 dark:bg-ice-500 text-white">
                     <Star className="h-3 w-3 mr-1" />
                     Exclusive
                   </Badge>
                 )}
-                {!product.inStock && (
+                {!product.in_stock && (
                   <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
                     <Badge variant="destructive">Out of Stock</Badge>
                   </div>
@@ -132,16 +134,22 @@ export function ProductGrid({ products }: ProductGridProps) {
             <CardFooter className="p-4 pt-0">
               <Button
                 onClick={() => handleAddToCart(product)}
-                disabled={!product.inStock}
+                disabled={!product.in_stock}
                 className="w-full bg-gradient-fire dark:bg-gradient-ice hover:opacity-90 transition-opacity"
               >
                 <ShoppingCart className="h-4 w-4 mr-2" />
-                {product.inStock ? "Add to Cart" : "Out of Stock"}
+                {product.in_stock ? "Add to Cart" : "Out of Stock"}
               </Button>
             </CardFooter>
           </Card>
         ))}
       </div>
+
+      {filteredProducts.length === 0 && (
+        <div className="text-center py-12">
+          <p className="text-muted-foreground">No products found in this category.</p>
+        </div>
+      )}
     </div>
   )
 }

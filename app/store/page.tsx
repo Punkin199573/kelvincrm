@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 import { StoreHeader } from "@/components/store/store-header"
-import { ProductGrid } from "@/components/store/product-grid"
 import { StoreBanner } from "@/components/store/store-banner"
+import { StoreContent } from "@/components/store/store-content"
 
 export const metadata: Metadata = {
   title: "Merchandise Store | Kelvin Creekman Fan Club",
@@ -90,7 +90,7 @@ export default function StorePage() {
       <div className="container py-8 space-y-8">
         <StoreHeader />
         <StoreBanner />
-        <ProductGrid products={products} />
+        <StoreContent />
       </div>
     </div>
   )

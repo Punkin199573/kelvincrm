@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/components/auth/auth-provider"
@@ -12,20 +11,20 @@ interface AdminProtectionProps {
 }
 
 export function AdminProtection({ children }: AdminProtectionProps) {
-  const { user, loading } = useAuth()
+  const { user, profile, loading } = useAuth()
   const router = useRouter()
   const [isAuthorized, setIsAuthorized] = useState(false)
 
   useEffect(() => {
     if (!loading) {
-      // Check if user is admin (cloudyzaddy@gmail.com)
-      if (user?.email === "cloudyzaddy@gmail.com") {
+      // Check if user is admin
+      if (user && profile?.is_admin) {
         setIsAuthorized(true)
       } else {
         router.push("/login")
       }
     }
-  }, [user, loading, router])
+  }, [user, profile, loading, router])
 
   if (loading) {
     return (

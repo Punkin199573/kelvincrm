@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -42,7 +41,7 @@ const membershipTiers = [
     name: "Avalanche Backstage",
     price: 49.99,
     icon: Crown,
-    color: "bg-gold-500",
+    color: "bg-yellow-500",
     features: [
       "Everything in Blizzard VIP",
       "Weekly 1-on-1 video calls",
@@ -58,6 +57,7 @@ export function SignupForm() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
+  const [fullName, setFullName] = useState("")
   const [selectedTier, setSelectedTier] = useState("blizzard_vip")
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -87,23 +87,31 @@ export function SignupForm() {
       return
     }
 
+    if (!fullName.trim()) {
+      toast({
+        title: "Name required",
+        description: "Please enter your full name.",
+        variant: "destructive",
+      })
+      return
+    }
+
     setIsLoading(true)
 
     try {
-      await signUp(email, password)
+      // Store signup data in sessionStorage for after payment
+      sessionStorage.setItem(
+        "signup_data",
+        JSON.stringify({
+          email,
+          password,
+          fullName,
+          tier: selectedTier,
+        }),
+      )
 
-      // Redirect to Stripe checkout for membership payment
-      const selectedTierData = membershipTiers.find((tier) => tier.id === selectedTier)
-
-      toast({
-        title: "Account created! 🎉",
-        description: `Redirecting to payment for ${selectedTierData?.name} membership...`,
-      })
-
-      // Simulate Stripe checkout redirect
-      setTimeout(() => {
-        router.push(`/checkout?tier=${selectedTier}&email=${encodeURIComponent(email)}`)
-      }, 2000)
+      // Redirect to Stripe checkout
+      router.push(`/checkout?tier=${selectedTier}&email=${encodeURIComponent(email)}&signup=true`)
     } catch (error: any) {
       toast({
         title: "Sign up failed",
@@ -167,6 +175,19 @@ export function SignupForm() {
       {/* Account Details Form */}
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
+          <Label htmlFor="fullName">Full Name</Label>
+          <Input
+            id="fullName"
+            type="text"
+            placeholder="Enter your full name"
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+            required
+            className="border-fire-500/20 dark:border-ice-500/20 focus:border-fire-500 dark:focus:border-ice-500"
+          />
+        </div>
+
+        <div className="space-y-2">
           <Label htmlFor="email">Email</Label>
           <Input
             id="email"
@@ -228,10 +249,10 @@ export function SignupForm() {
           {isLoading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Creating account...
+              Processing...
             </>
           ) : (
-            `Create Account & Pay $${membershipTiers.find((t) => t.id === selectedTier)?.price}/month`
+            `Continue to Payment - $${membershipTiers.find((t) => t.id === selectedTier)?.price}/month`
           )}
         </Button>
       </form>

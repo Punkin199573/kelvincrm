@@ -1,38 +1,59 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Users, ShoppingBag, Video, DollarSign, Crown, Settings, Plus } from "lucide-react"
+import { Users, ShoppingBag, DollarSign, Crown, Settings, Plus, ImageIcon } from "lucide-react"
 import { useAuth } from "@/components/auth/auth-provider"
+import { supabase } from "@/lib/supabase/client"
+import { AdminProductManagement } from "@/components/admin/admin-product-management"
+import { AdminImageManagement } from "@/components/admin/admin-image-management"
 
 export function AdminDashboard() {
-  const { user } = useAuth()
+  const { profile } = useAuth()
   const [activeTab, setActiveTab] = useState("overview")
+  const [stats, setStats] = useState({
+    totalMembers: 0,
+    monthlyRevenue: 0,
+    totalProducts: 0,
+    totalOrders: 0,
+  })
 
-  // Mock data
-  const stats = {
-    totalMembers: 1247,
-    monthlyRevenue: 18650,
-    activeVideoSessions: 3,
-    totalOrders: 89,
-    newMembersThisMonth: 156,
-    conversionRate: 12.5,
+  useEffect(() => {
+    fetchStats()
+  }, [])
+
+  const fetchStats = async () => {
+    try {
+      // Fetch member count
+      const { count: memberCount } = await supabase.from("profiles").select("*", { count: "exact", head: true })
+
+      // Fetch product count
+      const { count: productCount } = await supabase.from("products").select("*", { count: "exact", head: true })
+
+      // Fetch order count
+      const { count: orderCount } = await supabase.from("orders").select("*", { count: "exact", head: true })
+
+      // Calculate monthly revenue (mock for now)
+      const { data: orders } = await supabase
+        .from("orders")
+        .select("total_amount")
+        .gte("created_at", new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString())
+
+      const monthlyRevenue = orders?.reduce((sum, order) => sum + Number(order.total_amount), 0) || 0
+
+      setStats({
+        totalMembers: memberCount || 0,
+        monthlyRevenue,
+        totalProducts: productCount || 0,
+        totalOrders: orderCount || 0,
+      })
+    } catch (error) {
+      console.error("Error fetching stats:", error)
+    }
   }
-
-  const recentOrders = [
-    { id: "ORD-001", customer: "Sarah M.", item: "Kelvin Portrait T-Shirt", amount: 29.99, status: "completed" },
-    { id: "ORD-002", customer: "Mike R.", item: "Sacred Geometry Mug", amount: 18.99, status: "processing" },
-    { id: "ORD-003", customer: "Emma L.", item: "Kelvin Creekman Beanie", amount: 24.99, status: "shipped" },
-  ]
-
-  const upcomingSessions = [
-    { id: "1", title: "Weekly Fan Q&A", date: "Today, 7:00 PM", participants: 45 },
-    { id: "2", title: "Behind the Scenes", date: "Tomorrow, 3:00 PM", participants: 23 },
-    { id: "3", title: "New Song Preview", date: "Friday, 8:00 PM", participants: 78 },
-  ]
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 p-6">
@@ -45,7 +66,8 @@ export function AdminDashboard() {
               Admin Dashboard
             </h1>
             <p className="text-muted-foreground">
-              Welcome back, {user?.email?.split("@")[0]}! Here's what's happening with your fan club.
+              Welcome back, {profile?.full_name || profile?.email?.split("@")[0]}! Here's what's happening with your fan
+              club.
             </p>
           </div>
           <Badge className="bg-gold-500 text-white">
@@ -63,7 +85,7 @@ export function AdminDashboard() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-fire-600 dark:text-ice-400">{stats.totalMembers}</div>
-              <p className="text-xs text-muted-foreground">+{stats.newMembersThisMonth} this month</p>
+              <p className="text-xs text-muted-foreground">Active subscribers</p>
             </CardContent>
           </Card>
 
@@ -73,19 +95,21 @@ export function AdminDashboard() {
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-fire-600 dark:text-ice-400">${stats.monthlyRevenue}</div>
-              <p className="text-xs text-muted-foreground">+{stats.conversionRate}% from last month</p>
+              <div className="text-2xl font-bold text-fire-600 dark:text-ice-400">
+                ${stats.monthlyRevenue.toFixed(2)}
+              </div>
+              <p className="text-xs text-muted-foreground">This month</p>
             </CardContent>
           </Card>
 
           <Card className="border-fire-500/20 dark:border-ice-500/20">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active Sessions</CardTitle>
-              <Video className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">Total Products</CardTitle>
+              <ShoppingBag className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-fire-600 dark:text-ice-400">{stats.activeVideoSessions}</div>
-              <p className="text-xs text-muted-foreground">Live video sessions</p>
+              <div className="text-2xl font-bold text-fire-600 dark:text-ice-400">{stats.totalProducts}</div>
+              <p className="text-xs text-muted-foreground">In store</p>
             </CardContent>
           </Card>
 
@@ -96,75 +120,56 @@ export function AdminDashboard() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-fire-600 dark:text-ice-400">{stats.totalOrders}</div>
-              <p className="text-xs text-muted-foreground">This month</p>
+              <p className="text-xs text-muted-foreground">All time</p>
             </CardContent>
           </Card>
         </div>
 
         {/* Main Content Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="members">Members</TabsTrigger>
-            <TabsTrigger value="store">Store</TabsTrigger>
-            <TabsTrigger value="sessions">Sessions</TabsTrigger>
+            <TabsTrigger value="products">Products</TabsTrigger>
+            <TabsTrigger value="images">Images</TabsTrigger>
+            <TabsTrigger value="orders">Orders</TabsTrigger>
             <TabsTrigger value="settings">Settings</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-4">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Recent Orders */}
               <Card className="border-fire-500/20 dark:border-ice-500/20">
                 <CardHeader>
-                  <CardTitle className="text-fire-600 dark:text-ice-400">Recent Orders</CardTitle>
-                  <CardDescription>Latest merchandise orders from your fans</CardDescription>
+                  <CardTitle className="text-fire-600 dark:text-ice-400">Quick Actions</CardTitle>
+                  <CardDescription>Common admin tasks</CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {recentOrders.map((order) => (
-                      <div
-                        key={order.id}
-                        className="flex items-center justify-between p-3 border border-muted rounded-lg"
-                      >
-                        <div>
-                          <p className="font-medium">{order.customer}</p>
-                          <p className="text-sm text-muted-foreground">{order.item}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-medium">${order.amount}</p>
-                          <Badge variant={order.status === "completed" ? "default" : "secondary"}>{order.status}</Badge>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                <CardContent className="space-y-4">
+                  <Button
+                    onClick={() => setActiveTab("products")}
+                    className="w-full justify-start bg-gradient-fire dark:bg-gradient-ice"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add New Product
+                  </Button>
+                  <Button onClick={() => setActiveTab("images")} variant="outline" className="w-full justify-start">
+                    <ImageIcon className="h-4 w-4 mr-2" />
+                    Manage Images
+                  </Button>
+                  <Button onClick={() => setActiveTab("members")} variant="outline" className="w-full justify-start">
+                    <Users className="h-4 w-4 mr-2" />
+                    View Members
+                  </Button>
                 </CardContent>
               </Card>
 
-              {/* Upcoming Sessions */}
               <Card className="border-fire-500/20 dark:border-ice-500/20">
                 <CardHeader>
-                  <CardTitle className="text-fire-600 dark:text-ice-400">Upcoming Sessions</CardTitle>
-                  <CardDescription>Your scheduled video sessions with fans</CardDescription>
+                  <CardTitle className="text-fire-600 dark:text-ice-400">Recent Activity</CardTitle>
+                  <CardDescription>Latest system activity</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    {upcomingSessions.map((session) => (
-                      <div
-                        key={session.id}
-                        className="flex items-center justify-between p-3 border border-muted rounded-lg"
-                      >
-                        <div>
-                          <p className="font-medium">{session.title}</p>
-                          <p className="text-sm text-muted-foreground">{session.date}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-medium">{session.participants} fans</p>
-                          <Button size="sm" className="bg-gradient-fire dark:bg-gradient-ice">
-                            Join
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
+                  <div className="text-center py-8 text-muted-foreground">
+                    <p>Activity feed coming soon...</p>
                   </div>
                 </CardContent>
               </Card>
@@ -190,57 +195,28 @@ export function AdminDashboard() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="store" className="space-y-4">
+          <TabsContent value="products" className="space-y-4">
+            <AdminProductManagement />
+          </TabsContent>
+
+          <TabsContent value="images" className="space-y-4">
+            <AdminImageManagement />
+          </TabsContent>
+
+          <TabsContent value="orders" className="space-y-4">
             <Card className="border-fire-500/20 dark:border-ice-500/20">
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle className="text-fire-600 dark:text-ice-400">Store Management</CardTitle>
-                  <CardDescription>Manage your merchandise store and inventory</CardDescription>
-                </div>
-                <Button className="bg-gradient-fire dark:bg-gradient-ice">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Product
-                </Button>
+              <CardHeader>
+                <CardTitle className="text-fire-600 dark:text-ice-400">Order Management</CardTitle>
+                <CardDescription>View and manage customer orders</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="text-center py-8">
                   <ShoppingBag className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">Store Management</h3>
+                  <h3 className="text-lg font-semibold mb-2">Order Management</h3>
                   <p className="text-muted-foreground mb-4">
-                    Add, edit, and manage your merchandise inventory. Track sales and manage orders.
+                    View all customer orders, update order status, and manage fulfillment.
                   </p>
-                  <div className="flex gap-2 justify-center">
-                    <Button variant="outline">View Products</Button>
-                    <Button className="bg-gradient-fire dark:bg-gradient-ice">Manage Orders</Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="sessions" className="space-y-4">
-            <Card className="border-fire-500/20 dark:border-ice-500/20">
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle className="text-fire-600 dark:text-ice-400">Video Sessions</CardTitle>
-                  <CardDescription>Manage your video calls and meet & greet sessions</CardDescription>
-                </div>
-                <Button className="bg-gradient-fire dark:bg-gradient-ice">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Schedule Session
-                </Button>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8">
-                  <Video className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">Video Session Management</h3>
-                  <p className="text-muted-foreground mb-4">
-                    Schedule and manage your video calls with fans. Host live sessions and meet & greets.
-                  </p>
-                  <div className="flex gap-2 justify-center">
-                    <Button variant="outline">View Schedule</Button>
-                    <Button className="bg-gradient-fire dark:bg-gradient-ice">Start Live Session</Button>
-                  </div>
+                  <Button className="bg-gradient-fire dark:bg-gradient-ice">View All Orders</Button>
                 </div>
               </CardContent>
             </Card>
