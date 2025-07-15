@@ -3,6 +3,7 @@
 import type React from "react"
 import { createContext, useContext, useReducer, useEffect } from "react"
 import { useToast } from "@/hooks/use-toast"
+import { useAuth } from "@/components/auth/auth-provider"
 
 interface CartItem {
   id: string
@@ -18,6 +19,7 @@ interface CartState {
   items: CartItem[]
   total: number
   itemCount: number
+  isCheckingOut: boolean
 }
 
 type CartAction =
@@ -26,6 +28,7 @@ type CartAction =
   | { type: "UPDATE_QUANTITY"; payload: { id: string; quantity: number } }
   | { type: "CLEAR_CART" }
   | { type: "LOAD_CART"; payload: CartItem[] }
+  | { type: "SET_CHECKOUT_LOADING"; payload: boolean }
 
 interface CartContextType {
   state: CartState
@@ -33,6 +36,7 @@ interface CartContextType {
   removeItem: (id: string) => void
   updateQuantity: (id: string, quantity: number) => void
   clearCart: () => void
+  checkout: () => Promise<void>
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined)
@@ -95,17 +99,24 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
     }
     case "CLEAR_CART":
       return {
+        ...state,
         items: [],
         total: 0,
         itemCount: 0,
       }
     case "LOAD_CART": {
       return {
+        ...state,
         items: action.payload,
         total: action.payload.reduce((sum, item) => sum + item.price * item.quantity, 0),
         itemCount: action.payload.reduce((sum, item) => sum + item.quantity, 0),
       }
     }
+    case "SET_CHECKOUT_LOADING":
+      return {
+        ...state,
+        isCheckingOut: action.payload,
+      }
     default:
       return state
   }
@@ -116,8 +127,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     items: [],
     total: 0,
     itemCount: 0,
+    isCheckingOut: false,
   })
   const { toast } = useToast()
+  const { user } = useAuth()
 
   // Load cart from localStorage on mount
   useEffect(() => {
@@ -172,12 +185,66 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     })
   }
 
+  const checkout = async () => {
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to complete your purchase.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (state.items.length === 0) {
+      toast({
+        title: "Empty Cart",
+        description: "Add some items to your cart before checking out.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      dispatch({ type: "SET_CHECKOUT_LOADING", payload: true })
+
+      const response = await fetch("/api/create-store-checkout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          items: state.items,
+          userId: user.id,
+          total: state.total,
+        }),
+      })
+
+      const { url, error } = await response.json()
+
+      if (error) {
+        throw new Error(error)
+      }
+
+      // Redirect to Stripe Checkout
+      window.location.href = url
+    } catch (error: any) {
+      toast({
+        title: "Checkout Failed",
+        description: error.message || "There was an error processing your checkout.",
+        variant: "destructive",
+      })
+    } finally {
+      dispatch({ type: "SET_CHECKOUT_LOADING", payload: false })
+    }
+  }
+
   const value = {
     state,
     addItem,
     removeItem,
     updateQuantity,
     clearCart,
+    checkout,
   }
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>

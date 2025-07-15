@@ -1,32 +1,40 @@
 "use client"
 
+import type React from "react"
+
 import { useState, useEffect } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Plus, Edit, Trash2 } from "lucide-react"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { Plus, Edit, Trash2, Package, DollarSign } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { supabase, type Product } from "@/lib/supabase/client"
 
 export function AdminProductManagement() {
   const [products, setProducts] = useState<Product[]>([])
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
-  const [newProduct, setNewProduct] = useState({
+  const [formData, setFormData] = useState({
     name: "",
     description: "",
-    price: 0,
+    price: "",
     image_url: "",
     category: "apparel" as const,
-    tier_visibility: ["frost_fan", "blizzard_vip", "avalanche_backstage"] as string[],
+    tier_visibility: [] as string[],
     in_stock: true,
     is_exclusive: false,
     sizes: [] as string[],
@@ -35,12 +43,29 @@ export function AdminProductManagement() {
 
   const { toast } = useToast()
 
+  const categories = [
+    { value: "apparel", label: "Apparel" },
+    { value: "accessories", label: "Accessories" },
+    { value: "music", label: "Music" },
+    { value: "collectibles", label: "Collectibles" },
+  ]
+
+  const tiers = [
+    { value: "frost_fan", label: "Frost Fan" },
+    { value: "blizzard_vip", label: "Blizzard VIP" },
+    { value: "avalanche_backstage", label: "Avalanche Backstage" },
+  ]
+
+  const availableSizes = ["XS", "S", "M", "L", "XL", "XXL"]
+  const availableColors = ["Black", "White", "Gray", "Blue", "Red", "Green"]
+
   useEffect(() => {
     fetchProducts()
   }, [])
 
   const fetchProducts = async () => {
     try {
+      setLoading(true)
       const { data, error } = await supabase.from("products").select("*").order("created_at", { ascending: false })
 
       if (error) throw error
@@ -52,88 +77,87 @@ export function AdminProductManagement() {
         description: "Failed to fetch products",
         variant: "destructive",
       })
+    } finally {
+      setLoading(false)
     }
   }
 
-  const handleCreateProduct = async () => {
-    if (!newProduct.name || !newProduct.price) {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (!formData.name || !formData.price) {
       toast({
         title: "Validation Error",
-        description: "Please fill in all required fields",
+        description: "Name and price are required",
         variant: "destructive",
       })
       return
     }
 
-    setIsLoading(true)
-
     try {
-      const { data, error } = await supabase.from("products").insert([newProduct]).select().single()
+      const productData = {
+        name: formData.name,
+        description: formData.description,
+        price: Number.parseFloat(formData.price),
+        image_url: formData.image_url,
+        category: formData.category,
+        tier_visibility: formData.tier_visibility,
+        in_stock: formData.in_stock,
+        is_exclusive: formData.is_exclusive,
+        sizes: formData.sizes,
+        colors: formData.colors,
+      }
 
-      if (error) throw error
+      if (editingProduct) {
+        const { error } = await supabase.from("products").update(productData).eq("id", editingProduct.id)
 
-      setProducts([data, ...products])
+        if (error) throw error
+
+        toast({
+          title: "Success",
+          description: "Product updated successfully",
+        })
+      } else {
+        const { error } = await supabase.from("products").insert([productData])
+
+        if (error) throw error
+
+        toast({
+          title: "Success",
+          description: "Product created successfully",
+        })
+      }
+
+      setIsDialogOpen(false)
       resetForm()
-      setIsCreateDialogOpen(false)
-
-      toast({
-        title: "Success",
-        description: "Product created successfully!",
-      })
+      fetchProducts()
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "Failed to create product",
+        description: error.message || "Failed to save product",
         variant: "destructive",
       })
-    } finally {
-      setIsLoading(false)
     }
   }
 
-  const handleUpdateProduct = async () => {
-    if (!editingProduct || !newProduct.name || !newProduct.price) {
-      toast({
-        title: "Validation Error",
-        description: "Please fill in all required fields",
-        variant: "destructive",
-      })
-      return
-    }
-
-    setIsLoading(true)
-
-    try {
-      const { data, error } = await supabase
-        .from("products")
-        .update(newProduct)
-        .eq("id", editingProduct.id)
-        .select()
-        .single()
-
-      if (error) throw error
-
-      setProducts(products.map((p) => (p.id === editingProduct.id ? data : p)))
-      resetForm()
-      setEditingProduct(null)
-      setIsCreateDialogOpen(false)
-
-      toast({
-        title: "Success",
-        description: "Product updated successfully!",
-      })
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to update product",
-        variant: "destructive",
-      })
-    } finally {
-      setIsLoading(false)
-    }
+  const handleEdit = (product: Product) => {
+    setEditingProduct(product)
+    setFormData({
+      name: product.name,
+      description: product.description || "",
+      price: product.price.toString(),
+      image_url: product.image_url || "",
+      category: product.category,
+      tier_visibility: product.tier_visibility,
+      in_stock: product.in_stock,
+      is_exclusive: product.is_exclusive,
+      sizes: product.sizes,
+      colors: product.colors,
+    })
+    setIsDialogOpen(true)
   }
 
-  const handleDeleteProduct = async (productId: string) => {
+  const handleDelete = async (productId: string) => {
     if (!confirm("Are you sure you want to delete this product?")) return
 
     try {
@@ -141,12 +165,11 @@ export function AdminProductManagement() {
 
       if (error) throw error
 
-      setProducts(products.filter((p) => p.id !== productId))
-
       toast({
         title: "Success",
-        description: "Product deleted successfully!",
+        description: "Product deleted successfully",
       })
+      fetchProducts()
     } catch (error: any) {
       toast({
         title: "Error",
@@ -156,31 +179,14 @@ export function AdminProductManagement() {
     }
   }
 
-  const handleEditProduct = (product: Product) => {
-    setEditingProduct(product)
-    setNewProduct({
-      name: product.name,
-      description: product.description || "",
-      price: product.price,
-      image_url: product.image_url || "",
-      category: product.category,
-      tier_visibility: product.tier_visibility,
-      in_stock: product.in_stock,
-      is_exclusive: product.is_exclusive,
-      sizes: product.sizes,
-      colors: product.colors,
-    })
-    setIsCreateDialogOpen(true)
-  }
-
   const resetForm = () => {
-    setNewProduct({
+    setFormData({
       name: "",
       description: "",
-      price: 0,
+      price: "",
       image_url: "",
       category: "apparel",
-      tier_visibility: ["frost_fan", "blizzard_vip", "avalanche_backstage"],
+      tier_visibility: [],
       in_stock: true,
       is_exclusive: false,
       sizes: [],
@@ -189,18 +195,27 @@ export function AdminProductManagement() {
     setEditingProduct(null)
   }
 
-  const handleTierVisibilityChange = (tier: string, checked: boolean) => {
-    if (checked) {
-      setNewProduct({
-        ...newProduct,
-        tier_visibility: [...newProduct.tier_visibility, tier],
-      })
-    } else {
-      setNewProduct({
-        ...newProduct,
-        tier_visibility: newProduct.tier_visibility.filter((t) => t !== tier),
-      })
-    }
+  const handleTierToggle = (tier: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      tier_visibility: prev.tier_visibility.includes(tier)
+        ? prev.tier_visibility.filter((t) => t !== tier)
+        : [...prev.tier_visibility, tier],
+    }))
+  }
+
+  const handleSizeToggle = (size: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      sizes: prev.sizes.includes(size) ? prev.sizes.filter((s) => s !== size) : [...prev.sizes, size],
+    }))
+  }
+
+  const handleColorToggle = (color: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      colors: prev.colors.includes(color) ? prev.colors.filter((c) => c !== color) : [...prev.colors, color],
+    }))
   }
 
   const getTierBadge = (tier: string) => {
@@ -216,210 +231,264 @@ export function AdminProductManagement() {
     }
   }
 
-  return (
-    <div className="space-y-6">
+  if (loading) {
+    return (
       <Card className="border-fire-500/20 dark:border-ice-500/20">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle className="text-fire-600 dark:text-ice-400">Product Management</CardTitle>
+        <CardContent className="p-6">
+          <div className="animate-pulse space-y-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-20 bg-muted rounded"></div>
+            ))}
           </div>
-          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="bg-gradient-fire dark:bg-gradient-ice" onClick={resetForm}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Product
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>{editingProduct ? "Edit Product" : "Create New Product"}</DialogTitle>
-              </DialogHeader>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
+        </CardContent>
+      </Card>
+    )
+  }
+
+  return (
+    <Card className="border-fire-500/20 dark:border-ice-500/20">
+      <CardHeader className="flex flex-row items-center justify-between">
+        <div>
+          <CardTitle className="text-fire-600 dark:text-ice-400">Product Management</CardTitle>
+          <CardDescription>Manage your merchandise store and inventory</CardDescription>
+        </div>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button onClick={resetForm} className="bg-gradient-fire dark:bg-gradient-ice">
+              <Plus className="h-4 w-4 mr-2" />
+              Add Product
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>{editingProduct ? "Edit Product" : "Add New Product"}</DialogTitle>
+              <DialogDescription>
+                {editingProduct ? "Update product details" : "Create a new product for your store"}
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="name">Product Name *</Label>
+                  <Label htmlFor="name">Product Name</Label>
                   <Input
                     id="name"
-                    value={newProduct.name}
-                    onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
+                    value={formData.name}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
                     placeholder="Enter product name"
+                    required
                   />
                 </div>
-
                 <div className="space-y-2">
-                  <Label htmlFor="price">Price *</Label>
+                  <Label htmlFor="price">Price ($)</Label>
                   <Input
                     id="price"
                     type="number"
                     step="0.01"
-                    value={newProduct.price}
-                    onChange={(e) => setNewProduct({ ...newProduct, price: Number(e.target.value) })}
+                    value={formData.price}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, price: e.target.value }))}
                     placeholder="0.00"
+                    required
                   />
                 </div>
+              </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="category">Category</Label>
-                  <Select
-                    value={newProduct.category}
-                    onValueChange={(value: any) => setNewProduct({ ...newProduct, category: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="apparel">Apparel</SelectItem>
-                      <SelectItem value="accessories">Accessories</SelectItem>
-                      <SelectItem value="music">Music</SelectItem>
-                      <SelectItem value="collectibles">Collectibles</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  value={formData.description}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
+                  placeholder="Product description"
+                  rows={3}
+                />
+              </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="image_url">Image URL</Label>
-                  <Input
-                    id="image_url"
-                    value={newProduct.image_url}
-                    onChange={(e) => setNewProduct({ ...newProduct, image_url: e.target.value })}
-                    placeholder="https://example.com/image.jpg"
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="image_url">Image URL</Label>
+                <Input
+                  id="image_url"
+                  value={formData.image_url}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, image_url: e.target.value }))}
+                  placeholder="https://example.com/image.jpg"
+                />
+              </div>
 
-                <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea
-                    id="description"
-                    value={newProduct.description}
-                    onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })}
-                    placeholder="Enter product description"
-                    rows={3}
-                  />
-                </div>
-
-                <div className="space-y-2 md:col-span-2">
-                  <Label>Tier Visibility</Label>
-                  <div className="flex gap-4">
-                    {[
-                      { id: "frost_fan", label: "Frost Fan" },
-                      { id: "blizzard_vip", label: "Blizzard VIP" },
-                      { id: "avalanche_backstage", label: "Avalanche Backstage" },
-                    ].map((tier) => (
-                      <div key={tier.id} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={tier.id}
-                          checked={newProduct.tier_visibility.includes(tier.id)}
-                          onCheckedChange={(checked) => handleTierVisibilityChange(tier.id, checked as boolean)}
-                        />
-                        <Label htmlFor={tier.id}>{tier.label}</Label>
-                      </div>
+              <div className="space-y-2">
+                <Label htmlFor="category">Category</Label>
+                <Select
+                  value={formData.category}
+                  onValueChange={(value: any) => setFormData((prev) => ({ ...prev, category: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((category) => (
+                      <SelectItem key={category.value} value={category.value}>
+                        {category.label}
+                      </SelectItem>
                     ))}
-                  </div>
-                </div>
+                  </SelectContent>
+                </Select>
+              </div>
 
+              <div className="space-y-2">
+                <Label>Tier Visibility</Label>
+                <div className="flex flex-wrap gap-2">
+                  {tiers.map((tier) => (
+                    <div key={tier.value} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={tier.value}
+                        checked={formData.tier_visibility.includes(tier.value)}
+                        onCheckedChange={() => handleTierToggle(tier.value)}
+                      />
+                      <Label htmlFor={tier.value} className="text-sm">
+                        {tier.label}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {formData.category === "apparel" && (
+                <>
+                  <div className="space-y-2">
+                    <Label>Available Sizes</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {availableSizes.map((size) => (
+                        <div key={size} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`size-${size}`}
+                            checked={formData.sizes.includes(size)}
+                            onCheckedChange={() => handleSizeToggle(size)}
+                          />
+                          <Label htmlFor={`size-${size}`} className="text-sm">
+                            {size}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Available Colors</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {availableColors.map((color) => (
+                        <div key={color} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`color-${color}`}
+                            checked={formData.colors.includes(color)}
+                            onCheckedChange={() => handleColorToggle(color)}
+                          />
+                          <Label htmlFor={`color-${color}`} className="text-sm">
+                            {color}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+
+              <div className="flex items-center space-x-4">
                 <div className="flex items-center space-x-2">
                   <Checkbox
                     id="in_stock"
-                    checked={newProduct.in_stock}
-                    onCheckedChange={(checked) => setNewProduct({ ...newProduct, in_stock: checked as boolean })}
+                    checked={formData.in_stock}
+                    onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, in_stock: !!checked }))}
                   />
                   <Label htmlFor="in_stock">In Stock</Label>
                 </div>
-
                 <div className="flex items-center space-x-2">
                   <Checkbox
                     id="is_exclusive"
-                    checked={newProduct.is_exclusive}
-                    onCheckedChange={(checked) => setNewProduct({ ...newProduct, is_exclusive: checked as boolean })}
+                    checked={formData.is_exclusive}
+                    onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, is_exclusive: !!checked }))}
                   />
                   <Label htmlFor="is_exclusive">Exclusive Item</Label>
                 </div>
               </div>
 
-              <div className="flex justify-end gap-3">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setIsCreateDialogOpen(false)
-                    resetForm()
-                  }}
-                >
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                   Cancel
                 </Button>
-                <Button
-                  onClick={editingProduct ? handleUpdateProduct : handleCreateProduct}
-                  disabled={isLoading}
-                  className="bg-gradient-fire dark:bg-gradient-ice"
-                >
-                  {isLoading ? "Saving..." : editingProduct ? "Update Product" : "Create Product"}
+                <Button type="submit" className="bg-gradient-fire dark:bg-gradient-ice">
+                  {editingProduct ? "Update Product" : "Create Product"}
                 </Button>
               </div>
-            </DialogContent>
-          </Dialog>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Product</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Price</TableHead>
-                <TableHead>Tier Visibility</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {products.map((product) => (
-                <TableRow key={product.id}>
-                  <TableCell>
-                    <div className="space-y-1">
-                      <div className="font-medium">{product.name}</div>
-                      {product.is_exclusive && (
-                        <Badge variant="outline" className="text-xs">
-                          Exclusive
-                        </Badge>
-                      )}
+            </form>
+          </DialogContent>
+        </Dialog>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          {products.length > 0 ? (
+            products.map((product) => (
+              <div
+                key={product.id}
+                className="flex items-center justify-between p-4 border border-muted rounded-lg hover:bg-muted/50 transition-colors"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 bg-muted rounded-lg overflow-hidden">
+                    {product.image_url ? (
+                      <img
+                        src={product.image_url || "/placeholder.svg"}
+                        alt={product.name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <Package className="h-6 w-6 text-muted-foreground" />
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <h3 className="font-semibold">{product.name}</h3>
+                    <p className="text-sm text-muted-foreground capitalize">{product.category}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Badge variant={product.in_stock ? "default" : "destructive"}>
+                        {product.in_stock ? "In Stock" : "Out of Stock"}
+                      </Badge>
+                      {product.is_exclusive && <Badge className="bg-gold-500/20 text-gold-400">Exclusive</Badge>}
                     </div>
-                  </TableCell>
-                  <TableCell className="capitalize">{product.category}</TableCell>
-                  <TableCell>${product.price}</TableCell>
-                  <TableCell>
-                    <div className="flex gap-1 flex-wrap">
-                      {product.tier_visibility.map((tier) => getTierBadge(tier))}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={product.in_stock ? "default" : "destructive"}>
-                      {product.in_stock ? "In Stock" : "Out of Stock"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Button size="sm" variant="outline" onClick={() => handleEditProduct(product)}>
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleDeleteProduct(product.id)}
-                        className="text-red-600 hover:text-red-700"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-
-          {products.length === 0 && (
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="flex items-center gap-2 mb-2">
+                    <DollarSign className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-semibold">{product.price}</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1 mb-2">
+                    {product.tier_visibility.map((tier) => (
+                      <div key={tier}>{getTierBadge(tier)}</div>
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm" onClick={() => handleEdit(product)}>
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDelete(product.id)}
+                      className="text-red-500 hover:text-red-600"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))
+          ) : (
             <div className="text-center py-8 text-muted-foreground">
-              <p>No products found. Create your first product to get started.</p>
+              <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>No products found</p>
+              <p className="text-sm">Create your first product to get started</p>
             </div>
           )}
-        </CardContent>
-      </Card>
-    </div>
+        </div>
+      </CardContent>
+    </Card>
   )
 }

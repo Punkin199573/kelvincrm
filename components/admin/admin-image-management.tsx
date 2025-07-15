@@ -3,32 +3,45 @@
 import type React from "react"
 
 import { useState, useEffect } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Plus, Edit, Trash2, Upload, ImageIcon } from "lucide-react"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { Plus, Edit, Trash2, ImageIcon, ExternalLink } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
-import { supabase, type ImageAsset } from "@/lib/supabase/client"
-import Image from "next/image"
+import { supabase, type Image } from "@/lib/supabase/client"
 
 export function AdminImageManagement() {
-  const [images, setImages] = useState<ImageAsset[]>([])
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
-  const [editingImage, setEditingImage] = useState<ImageAsset | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
-  const [uploading, setUploading] = useState(false)
-  const [newImage, setNewImage] = useState({
+  const [images, setImages] = useState<Image[]>([])
+  const [loading, setLoading] = useState(true)
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [editingImage, setEditingImage] = useState<Image | null>(null)
+  const [formData, setFormData] = useState({
     name: "",
     url: "",
     category: "homepage",
     alt_text: "",
   })
+  const [uploading, setUploading] = useState(false)
 
   const { toast } = useToast()
+
+  const categories = [
+    { value: "homepage", label: "Homepage" },
+    { value: "events", label: "Events Page" },
+    { value: "store", label: "Store" },
+    { value: "community", label: "Community" },
+    { value: "general", label: "General" },
+  ]
 
   useEffect(() => {
     fetchImages()
@@ -36,6 +49,7 @@ export function AdminImageManagement() {
 
   const fetchImages = async () => {
     try {
+      setLoading(true)
       const { data, error } = await supabase.from("images").select("*").order("created_at", { ascending: false })
 
       if (error) throw error
@@ -47,6 +61,8 @@ export function AdminImageManagement() {
         description: "Failed to fetch images",
         variant: "destructive",
       })
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -54,28 +70,36 @@ export function AdminImageManagement() {
     const file = event.target.files?.[0]
     if (!file) return
 
-    setUploading(true)
-
     try {
+      setUploading(true)
+
+      // Upload to Supabase Storage
       const fileExt = file.name.split(".").pop()
       const fileName = `${Math.random()}.${fileExt}`
       const filePath = `images/${fileName}`
 
-      const { error: uploadError } = await supabase.storage.from("assets").upload(filePath, file)
+      const { error: uploadError } = await supabase.storage.from("images").upload(filePath, file)
 
       if (uploadError) throw uploadError
 
-      const { data } = supabase.storage.from("assets").getPublicUrl(filePath)
+      // Get public URL
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from("images").getPublicUrl(filePath)
 
-      setNewImage({ ...newImage, url: data.publicUrl })
+      setFormData((prev) => ({
+        ...prev,
+        url: publicUrl,
+        name: prev.name || file.name.split(".")[0],
+      }))
 
       toast({
         title: "Success",
-        description: "Image uploaded successfully!",
+        description: "Image uploaded successfully",
       })
     } catch (error: any) {
       toast({
-        title: "Error",
+        title: "Upload Error",
         description: error.message || "Failed to upload image",
         variant: "destructive",
       })
@@ -84,80 +108,70 @@ export function AdminImageManagement() {
     }
   }
 
-  const handleCreateImage = async () => {
-    if (!newImage.name || !newImage.url || !newImage.category) {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (!formData.name || !formData.url) {
       toast({
         title: "Validation Error",
-        description: "Please fill in all required fields",
+        description: "Name and URL are required",
         variant: "destructive",
       })
       return
     }
 
-    setIsLoading(true)
-
     try {
-      const { data, error } = await supabase.from("images").insert([newImage]).select().single()
+      const imageData = {
+        name: formData.name,
+        url: formData.url,
+        category: formData.category,
+        alt_text: formData.alt_text,
+      }
 
-      if (error) throw error
+      if (editingImage) {
+        const { error } = await supabase.from("images").update(imageData).eq("id", editingImage.id)
 
-      setImages([data, ...images])
+        if (error) throw error
+
+        toast({
+          title: "Success",
+          description: "Image updated successfully",
+        })
+      } else {
+        const { error } = await supabase.from("images").insert([imageData])
+
+        if (error) throw error
+
+        toast({
+          title: "Success",
+          description: "Image added successfully",
+        })
+      }
+
+      setIsDialogOpen(false)
       resetForm()
-      setIsCreateDialogOpen(false)
-
-      toast({
-        title: "Success",
-        description: "Image created successfully!",
-      })
+      fetchImages()
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "Failed to create image",
+        description: error.message || "Failed to save image",
         variant: "destructive",
       })
-    } finally {
-      setIsLoading(false)
     }
   }
 
-  const handleUpdateImage = async () => {
-    if (!editingImage || !newImage.name || !newImage.url || !newImage.category) {
-      toast({
-        title: "Validation Error",
-        description: "Please fill in all required fields",
-        variant: "destructive",
-      })
-      return
-    }
-
-    setIsLoading(true)
-
-    try {
-      const { data, error } = await supabase.from("images").update(newImage).eq("id", editingImage.id).select().single()
-
-      if (error) throw error
-
-      setImages(images.map((img) => (img.id === editingImage.id ? data : img)))
-      resetForm()
-      setEditingImage(null)
-      setIsCreateDialogOpen(false)
-
-      toast({
-        title: "Success",
-        description: "Image updated successfully!",
-      })
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to update image",
-        variant: "destructive",
-      })
-    } finally {
-      setIsLoading(false)
-    }
+  const handleEdit = (image: Image) => {
+    setEditingImage(image)
+    setFormData({
+      name: image.name,
+      url: image.url,
+      category: image.category,
+      alt_text: image.alt_text || "",
+    })
+    setIsDialogOpen(true)
   }
 
-  const handleDeleteImage = async (imageId: string) => {
+  const handleDelete = async (imageId: string) => {
     if (!confirm("Are you sure you want to delete this image?")) return
 
     try {
@@ -165,12 +179,11 @@ export function AdminImageManagement() {
 
       if (error) throw error
 
-      setImages(images.filter((img) => img.id !== imageId))
-
       toast({
         title: "Success",
-        description: "Image deleted successfully!",
+        description: "Image deleted successfully",
       })
+      fetchImages()
     } catch (error: any) {
       toast({
         title: "Error",
@@ -180,19 +193,8 @@ export function AdminImageManagement() {
     }
   }
 
-  const handleEditImage = (image: ImageAsset) => {
-    setEditingImage(image)
-    setNewImage({
-      name: image.name,
-      url: image.url,
-      category: image.category,
-      alt_text: image.alt_text || "",
-    })
-    setIsCreateDialogOpen(true)
-  }
-
   const resetForm = () => {
-    setNewImage({
+    setFormData({
       name: "",
       url: "",
       category: "homepage",
@@ -201,188 +203,178 @@ export function AdminImageManagement() {
     setEditingImage(null)
   }
 
-  return (
-    <div className="space-y-6">
+  if (loading) {
+    return (
       <Card className="border-fire-500/20 dark:border-ice-500/20">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle className="text-fire-600 dark:text-ice-400">Image Management</CardTitle>
+        <CardContent className="p-6">
+          <div className="animate-pulse grid grid-cols-1 md:grid-cols-3 gap-4">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="aspect-video bg-muted rounded"></div>
+            ))}
           </div>
-          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="bg-gradient-fire dark:bg-gradient-ice" onClick={resetForm}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Image
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl">
-              <DialogHeader>
-                <DialogTitle>{editingImage ? "Edit Image" : "Add New Image"}</DialogTitle>
-              </DialogHeader>
-              <div className="grid grid-cols-1 gap-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Image Name *</Label>
-                  <Input
-                    id="name"
-                    value={newImage.name}
-                    onChange={(e) => setNewImage({ ...newImage, name: e.target.value })}
-                    placeholder="Enter image name"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="category">Category *</Label>
-                  <Select
-                    value={newImage.category}
-                    onValueChange={(value) => setNewImage({ ...newImage, category: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="homepage">Homepage</SelectItem>
-                      <SelectItem value="events">Events</SelectItem>
-                      <SelectItem value="store">Store</SelectItem>
-                      <SelectItem value="community">Community</SelectItem>
-                      <SelectItem value="general">General</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="file-upload">Upload Image</Label>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      id="file-upload"
-                      type="file"
-                      accept="image/*"
-                      onChange={handleFileUpload}
-                      disabled={uploading}
-                    />
-                    <Button type="button" variant="outline" disabled={uploading} className="shrink-0 bg-transparent">
-                      {uploading ? (
-                        "Uploading..."
-                      ) : (
-                        <>
-                          <Upload className="h-4 w-4 mr-2" />
-                          Upload
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="url">Image URL *</Label>
-                  <Input
-                    id="url"
-                    value={newImage.url}
-                    onChange={(e) => setNewImage({ ...newImage, url: e.target.value })}
-                    placeholder="https://example.com/image.jpg or upload above"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="alt_text">Alt Text</Label>
-                  <Input
-                    id="alt_text"
-                    value={newImage.alt_text}
-                    onChange={(e) => setNewImage({ ...newImage, alt_text: e.target.value })}
-                    placeholder="Describe the image for accessibility"
-                  />
-                </div>
-
-                {newImage.url && (
-                  <div className="space-y-2">
-                    <Label>Preview</Label>
-                    <div className="relative w-full h-48 border rounded-lg overflow-hidden">
-                      <Image
-                        src={newImage.url || "/placeholder.svg"}
-                        alt={newImage.alt_text || "Preview"}
-                        fill
-                        className="object-cover"
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div className="flex justify-end gap-3">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setIsCreateDialogOpen(false)
-                    resetForm()
-                  }}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={editingImage ? handleUpdateImage : handleCreateImage}
-                  disabled={isLoading}
-                  className="bg-gradient-fire dark:bg-gradient-ice"
-                >
-                  {isLoading ? "Saving..." : editingImage ? "Update Image" : "Add Image"}
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Preview</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Alt Text</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {images.map((image) => (
-                <TableRow key={image.id}>
-                  <TableCell>
-                    <div className="relative w-16 h-16 border rounded overflow-hidden">
-                      <Image
-                        src={image.url || "/placeholder.svg"}
-                        alt={image.alt_text || image.name}
-                        fill
-                        className="object-cover"
-                      />
-                    </div>
-                  </TableCell>
-                  <TableCell className="font-medium">{image.name}</TableCell>
-                  <TableCell className="capitalize">{image.category}</TableCell>
-                  <TableCell className="max-w-xs truncate">{image.alt_text || "—"}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Button size="sm" variant="outline" onClick={() => handleEditImage(image)}>
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleDeleteImage(image.id)}
-                        className="text-red-600 hover:text-red-700"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-
-          {images.length === 0 && (
-            <div className="text-center py-8 text-muted-foreground">
-              <ImageIcon className="h-16 w-16 mx-auto mb-4 opacity-50" />
-              <p>No images found. Add your first image to get started.</p>
-            </div>
-          )}
         </CardContent>
       </Card>
-    </div>
+    )
+  }
+
+  return (
+    <Card className="border-fire-500/20 dark:border-ice-500/20">
+      <CardHeader className="flex flex-row items-center justify-between">
+        <div>
+          <CardTitle className="text-fire-600 dark:text-ice-400">Image Management</CardTitle>
+          <CardDescription>Manage images across your website</CardDescription>
+        </div>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button onClick={resetForm} className="bg-gradient-fire dark:bg-gradient-ice">
+              <Plus className="h-4 w-4 mr-2" />
+              Add Image
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>{editingImage ? "Edit Image" : "Add New Image"}</DialogTitle>
+              <DialogDescription>
+                {editingImage ? "Update image details" : "Upload or add a new image"}
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="file-upload">Upload Image</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    id="file-upload"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileUpload}
+                    disabled={uploading}
+                  />
+                  {uploading && <div className="text-sm text-muted-foreground">Uploading...</div>}
+                </div>
+              </div>
+
+              <div className="text-center text-muted-foreground">or</div>
+
+              <div className="space-y-2">
+                <Label htmlFor="url">Image URL</Label>
+                <Input
+                  id="url"
+                  value={formData.url}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, url: e.target.value }))}
+                  placeholder="https://example.com/image.jpg"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="name">Image Name</Label>
+                <Input
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
+                  placeholder="Enter image name"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="category">Category</Label>
+                <Select
+                  value={formData.category}
+                  onValueChange={(value) => setFormData((prev) => ({ ...prev, category: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((category) => (
+                      <SelectItem key={category.value} value={category.value}>
+                        {category.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="alt_text">Alt Text</Label>
+                <Input
+                  id="alt_text"
+                  value={formData.alt_text}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, alt_text: e.target.value }))}
+                  placeholder="Describe the image for accessibility"
+                />
+              </div>
+
+              {formData.url && (
+                <div className="space-y-2">
+                  <Label>Preview</Label>
+                  <div className="aspect-video bg-muted rounded-lg overflow-hidden">
+                    <img
+                      src={formData.url || "/placeholder.svg"}
+                      alt="Preview"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" className="bg-gradient-fire dark:bg-gradient-ice">
+                  {editingImage ? "Update Image" : "Add Image"}
+                </Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {images.length > 0 ? (
+            images.map((image) => (
+              <div
+                key={image.id}
+                className="group relative aspect-video bg-muted rounded-lg overflow-hidden border hover:border-electric-500/50 transition-colors"
+              >
+                <img
+                  src={image.url || "/placeholder.svg"}
+                  alt={image.alt_text || image.name}
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                  <Button variant="secondary" size="sm" onClick={() => window.open(image.url, "_blank")}>
+                    <ExternalLink className="h-4 w-4" />
+                  </Button>
+                  <Button variant="secondary" size="sm" onClick={() => handleEdit(image)}>
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => handleDelete(image.id)}
+                    className="text-red-500 hover:text-red-600"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="absolute bottom-0 left-0 right-0 bg-black/75 text-white p-2">
+                  <div className="font-medium text-sm truncate">{image.name}</div>
+                  <div className="text-xs text-gray-300 capitalize">{image.category}</div>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="col-span-full text-center py-8 text-muted-foreground">
+              <ImageIcon className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>No images found</p>
+              <p className="text-sm">Upload your first image to get started</p>
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   )
 }

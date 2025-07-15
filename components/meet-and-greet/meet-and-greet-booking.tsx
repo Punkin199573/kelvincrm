@@ -8,80 +8,23 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import {
-  Clock,
-  Users,
-  Crown,
-  Star,
-  Zap,
-  CalendarIcon,
-  Video,
-  MessageCircle,
-  Phone,
-  Shield,
-  CheckCircle,
-} from "lucide-react"
+import { Clock, Video, MessageCircle, Shield, CheckCircle, CreditCard, CalendarIcon, ExternalLink } from "lucide-react"
 import { useAuth } from "@/components/auth/auth-provider"
 import { useToast } from "@/hooks/use-toast"
+import { supabase } from "@/lib/supabase/client"
+import { loadStripe } from "@stripe/stripe-js"
+import React from "react"
 
-interface TimeSlot {
-  id: string
-  time: string
-  available: boolean
-  maxParticipants: number
-  currentParticipants: number
-  tierRequired: "frost" | "blizzard" | "avalanche"
-  price: number
-}
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
 
 interface PrivateSession {
   id: string
-  type: "whatsapp" | "facetime" | "video"
+  type: "whatsapp" | "signal" | "video"
   duration: number
   price: number
-  tierRequired: "blizzard" | "avalanche"
   description: string
+  features: string[]
 }
-
-const timeSlots: TimeSlot[] = [
-  {
-    id: "1",
-    time: "2:00 PM",
-    available: true,
-    maxParticipants: 10,
-    currentParticipants: 3,
-    tierRequired: "frost",
-    price: 0,
-  },
-  {
-    id: "2",
-    time: "3:30 PM",
-    available: true,
-    maxParticipants: 8,
-    currentParticipants: 5,
-    tierRequired: "blizzard",
-    price: 0,
-  },
-  {
-    id: "3",
-    time: "5:00 PM",
-    available: false,
-    maxParticipants: 5,
-    currentParticipants: 5,
-    tierRequired: "avalanche",
-    price: 0,
-  },
-  {
-    id: "4",
-    time: "7:00 PM",
-    available: true,
-    maxParticipants: 12,
-    currentParticipants: 2,
-    tierRequired: "frost",
-    price: 0,
-  },
-]
 
 const privateSessions: PrivateSession[] = [
   {
@@ -89,77 +32,67 @@ const privateSessions: PrivateSession[] = [
     type: "whatsapp",
     duration: 30,
     price: 150,
-    tierRequired: "blizzard",
     description: "Private WhatsApp video call with Kelvin. Perfect for personal conversations and getting advice.",
+    features: ["One-on-one with Kelvin", "WhatsApp video call", "30 minutes duration", "Flexible scheduling"],
   },
   {
-    id: "facetime",
-    type: "facetime",
+    id: "signal",
+    type: "signal",
     duration: 45,
     price: 200,
-    tierRequired: "avalanche",
-    description: "Exclusive FaceTime session with Kelvin. High-quality video call for the ultimate fan experience.",
+    description: "Exclusive Signal video session with Kelvin. High-quality, secure video call experience.",
+    features: ["One-on-one with Kelvin", "Signal video call", "45 minutes duration", "End-to-end encrypted"],
   },
   {
     id: "video",
     type: "video",
     duration: 60,
     price: 300,
-    tierRequired: "avalanche",
     description: "Premium private video session with screen sharing and recording included.",
+    features: ["One-on-one with Kelvin", "Daily.co video call", "60 minutes duration", "Recording included"],
   },
 ]
 
+const timeSlots = [
+  "09:00",
+  "10:00",
+  "11:00",
+  "12:00",
+  "13:00",
+  "14:00",
+  "15:00",
+  "16:00",
+  "17:00",
+  "18:00",
+  "19:00",
+  "20:00",
+]
+
 export function MeetAndGreetBooking() {
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date())
-  const [selectedTimeSlot, setSelectedTimeSlot] = useState<TimeSlot | null>(null)
   const [selectedPrivateSession, setSelectedPrivateSession] = useState<PrivateSession | null>(null)
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined)
+  const [selectedTime, setSelectedTime] = useState<string>("")
   const [isBooking, setIsBooking] = useState(false)
-  const [activeTab, setActiveTab] = useState("group")
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     phone: "",
     whatsappNumber: "",
-    appleId: "",
+    signalUsername: "",
     specialRequests: "",
-    preferredTime: "",
   })
+  const [paymentStatus, setPaymentStatus] = useState<"idle" | "processing" | "success" | "error">("idle")
+  const [sessionBooking, setSessionBooking] = useState<any>(null)
+
   const { user } = useAuth()
   const { toast } = useToast()
-
-  const getTierBadge = (tier: string) => {
-    switch (tier) {
-      case "frost":
-        return <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/50">Frost Fan</Badge>
-      case "blizzard":
-        return <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/50">Blizzard VIP</Badge>
-      case "avalanche":
-        return <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/50">Avalanche Elite</Badge>
-      default:
-        return null
-    }
-  }
-
-  const getTierIcon = (tier: string) => {
-    switch (tier) {
-      case "frost":
-        return <Star className="h-4 w-4" />
-      case "blizzard":
-        return <Zap className="h-4 w-4" />
-      case "avalanche":
-        return <Crown className="h-4 w-4" />
-      default:
-        return null
-    }
-  }
 
   const getSessionIcon = (type: string) => {
     switch (type) {
       case "whatsapp":
         return <MessageCircle className="h-5 w-5 text-green-500" />
-      case "facetime":
-        return <Phone className="h-5 w-5 text-blue-500" />
+      case "signal":
+        return <Shield className="h-5 w-5 text-blue-500" />
       case "video":
         return <Video className="h-5 w-5 text-purple-500" />
       default:
@@ -171,87 +104,11 @@ export function MeetAndGreetBooking() {
     setFormData((prev) => ({ ...prev, [field]: value }))
   }
 
-  const handleGroupBooking = async () => {
-    if (!selectedTimeSlot || !selectedDate || !user) {
-      toast({
-        title: "Booking Error",
-        description: "Please select a date, time slot, and ensure you're logged in.",
-        variant: "destructive",
-      })
-      return
-    }
-
-    if (!formData.name || !formData.email) {
+  const handleStripeCheckout = async () => {
+    if (!selectedPrivateSession || !user || !selectedDate || !selectedTime) {
       toast({
         title: "Missing Information",
-        description: "Please fill in your name and email address.",
-        variant: "destructive",
-      })
-      return
-    }
-
-    setIsBooking(true)
-
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 2000))
-
-      const booking = {
-        id: Math.random().toString(36).substr(2, 9),
-        type: "group",
-        date: selectedDate,
-        timeSlot: selectedTimeSlot,
-        userId: user.id,
-        userInfo: formData,
-        status: "confirmed",
-        createdAt: new Date(),
-      }
-
-      await fetch("/api/send-meetgreet-confirmation", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          userName: formData.name,
-          userEmail: formData.email,
-          sessionDate: selectedDate.toLocaleDateString(),
-          sessionTime: selectedTimeSlot.time,
-          sessionType: "Group Meet & Greet Video Call",
-          specialRequests: formData.specialRequests,
-        }),
-      })
-
-      toast({
-        title: "Group Session Booked! 🎸",
-        description: `Your meet & greet session is booked for ${selectedDate.toLocaleDateString()} at ${selectedTimeSlot.time}. Check your email for details!`,
-      })
-
-      setFormData({
-        name: "",
-        email: "",
-        phone: "",
-        whatsappNumber: "",
-        appleId: "",
-        specialRequests: "",
-        preferredTime: "",
-      })
-      setSelectedTimeSlot(null)
-    } catch (error) {
-      toast({
-        title: "Booking Failed",
-        description: "There was an error booking your session. Please try again.",
-        variant: "destructive",
-      })
-    } finally {
-      setIsBooking(false)
-    }
-  }
-
-  const handlePrivateBooking = async () => {
-    if (!selectedPrivateSession || !user) {
-      toast({
-        title: "Booking Error",
-        description: "Please select a session type and ensure you're logged in.",
+        description: "Please select a session type, date, time, and ensure you're logged in.",
         variant: "destructive",
       })
       return
@@ -276,10 +133,10 @@ export function MeetAndGreetBooking() {
       return
     }
 
-    if (selectedPrivateSession.type === "facetime" && !formData.appleId) {
+    if (selectedPrivateSession.type === "signal" && !formData.signalUsername) {
       toast({
-        title: "Apple ID Required",
-        description: "Please provide your Apple ID for the FaceTime session.",
+        title: "Signal Username Required",
+        description: "Please provide your Signal username for the session.",
         variant: "destructive",
       })
       return
@@ -288,445 +145,456 @@ export function MeetAndGreetBooking() {
     setIsBooking(true)
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 2000))
-
-      const booking = {
-        id: Math.random().toString(36).substr(2, 9),
-        type: "private",
-        session: selectedPrivateSession,
-        userId: user.id,
-        userInfo: formData,
-        status: "confirmed",
-        createdAt: new Date(),
-      }
-
-      await fetch("/api/send-meetgreet-confirmation", {
+      const response = await fetch("/api/create-session-checkout", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          userName: formData.name,
-          userEmail: formData.email,
-          sessionType: `Private ${selectedPrivateSession.type.toUpperCase()} Session`,
-          sessionDuration: `${selectedPrivateSession.duration} minutes`,
-          sessionPrice: `$${selectedPrivateSession.price}`,
-          contactInfo: selectedPrivateSession.type === "whatsapp" ? formData.whatsappNumber : formData.appleId,
-          specialRequests: formData.specialRequests,
-          preferredTime: formData.preferredTime,
+          sessionType: selectedPrivateSession.type,
+          sessionId: selectedPrivateSession.id,
+          amount: selectedPrivateSession.price,
+          duration: selectedPrivateSession.duration,
+          scheduledDate: selectedDate.toISOString().split("T")[0],
+          scheduledTime: selectedTime,
+          userInfo: formData,
+          userId: user.id,
         }),
       })
 
-      toast({
-        title: "Private Session Booked! 🔥",
-        description: `Your private ${selectedPrivateSession.type} session has been booked. Kelvin will contact you within 24 hours!`,
-      })
+      const { url, error } = await response.json()
 
-      setFormData({
-        name: "",
-        email: "",
-        phone: "",
-        whatsappNumber: "",
-        appleId: "",
-        specialRequests: "",
-        preferredTime: "",
-      })
-      setSelectedPrivateSession(null)
-    } catch (error) {
+      if (error) {
+        throw new Error(error)
+      }
+
+      window.location.href = url
+    } catch (error: any) {
+      setIsBooking(false)
       toast({
-        title: "Booking Failed",
-        description: "There was an error booking your session. Please try again.",
+        title: "Error",
+        description: error.message || "Failed to create checkout session",
         variant: "destructive",
       })
-    } finally {
-      setIsBooking(false)
     }
   }
 
-  const userTier = user?.user_metadata?.tier || "guest"
-  const canBookTier = (requiredTier: string) => {
-    const tierHierarchy = { guest: 0, frost: 1, blizzard: 2, avalanche: 3 }
+  // Check if we have a successful payment from URL params
+  React.useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search)
+    const paymentSuccess = urlParams.get("payment") === "success"
+    const sessionId = urlParams.get("session_id")
+
+    if (paymentSuccess && sessionId) {
+      // Fetch session details and show success
+      fetchSessionDetails(sessionId)
+    }
+  }, [])
+
+  const fetchSessionDetails = async (sessionId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("session_bookings")
+        .select("*")
+        .eq("stripe_session_id", sessionId)
+        .single()
+
+      if (error) throw error
+
+      setSessionBooking(data)
+      setPaymentStatus("success")
+
+      // Find the session type
+      const session = privateSessions.find((s) => s.type === data.session_type)
+      setSelectedPrivateSession(session || null)
+    } catch (error) {
+      console.error("Error fetching session details:", error)
+    }
+  }
+
+  if (paymentStatus === "success" && sessionBooking) {
     return (
-      tierHierarchy[userTier as keyof typeof tierHierarchy] >= tierHierarchy[requiredTier as keyof typeof tierHierarchy]
+      <PaymentSuccessCard
+        sessionBooking={sessionBooking}
+        selectedSession={selectedPrivateSession}
+        getSessionIcon={getSessionIcon}
+      />
     )
   }
 
   return (
     <div className="space-y-8">
-      {/* Session Type Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2 mb-8">
-          <TabsTrigger value="group" className="flex items-center gap-2">
-            <Users className="h-4 w-4" />
-            Group Sessions
-          </TabsTrigger>
-          <TabsTrigger value="private" className="flex items-center gap-2">
-            <Shield className="h-4 w-4" />
-            Private Sessions
-          </TabsTrigger>
-        </TabsList>
-
-        {/* Group Sessions Tab */}
-        <TabsContent value="group" className="space-y-8">
-          {/* User Information Form */}
-          <Card className="border-electric-700/30 bg-background/50 backdrop-blur-lg">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-electric-400">
-                <Users className="h-5 w-5" />
-                Your Information
-              </CardTitle>
-              <CardDescription>Please provide your details for the group meet & greet session</CardDescription>
+      {/* Private Session Options */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {privateSessions.map((session, index) => (
+          <Card
+            key={session.id}
+            className={`cursor-pointer transition-all border-2 ${
+              selectedPrivateSession?.id === session.id
+                ? "border-electric-500 bg-electric-500/10 shadow-lg"
+                : "border-electric-700/30 hover:border-electric-500/50 hover:shadow-md"
+            }`}
+            onClick={() => setSelectedPrivateSession(session)}
+          >
+            <CardHeader className="text-center">
+              <div className="flex justify-center mb-2">{getSessionIcon(session.type)}</div>
+              <CardTitle className="capitalize">{session.type} Session</CardTitle>
+              <CardDescription className="text-2xl font-bold text-electric-400">${session.price}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Full Name</Label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => handleInputChange("name", e.target.value)}
-                    placeholder="Enter your full name"
-                    className="border-electric-700/30 bg-background/50"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email Address</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => handleInputChange("email", e.target.value)}
-                    placeholder="Enter your email"
-                    className="border-electric-700/30 bg-background/50"
-                  />
-                </div>
+              <div className="text-center">
+                <Badge className="mb-2">{session.duration} minutes</Badge>
               </div>
+              <p className="text-sm text-muted-foreground text-center">{session.description}</p>
+
               <div className="space-y-2">
-                <Label htmlFor="requests">Special Requests (Optional)</Label>
-                <Textarea
-                  id="requests"
-                  value={formData.specialRequests}
-                  onChange={(e) => handleInputChange("specialRequests", e.target.value)}
-                  placeholder="Any special requests or questions for Kelvin?"
-                  className="border-electric-700/30 bg-background/50"
-                  rows={3}
-                />
+                {session.features.map((feature, featureIndex) => (
+                  <div key={featureIndex} className="flex items-center gap-2 text-sm">
+                    <CheckCircle className="h-4 w-4 text-green-500" />
+                    <span>{feature}</span>
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>
+        ))}
+      </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Calendar Section */}
-            <Card className="border-electric-700/30 bg-background/50 backdrop-blur-lg">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-electric-400">
-                  <CalendarIcon className="h-5 w-5" />
-                  Select Date
-                </CardTitle>
-                <CardDescription>Choose a date for your meet & greet session</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Calendar
-                  mode="single"
-                  selected={selectedDate}
-                  onSelect={setSelectedDate}
-                  disabled={(date) => date < new Date() || date > new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)}
-                  className="rounded-md border border-electric-700/30"
+      {/* Date and Time Selection */}
+      {selectedPrivateSession && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Calendar Section */}
+          <Card className="border-electric-700/30 bg-background/50 backdrop-blur-lg">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-electric-400">
+                <CalendarIcon className="h-5 w-5" />
+                Select Date
+              </CardTitle>
+              <CardDescription>Choose your preferred date for the session</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Calendar
+                mode="single"
+                selected={selectedDate}
+                onSelect={setSelectedDate}
+                disabled={(date) => date < new Date() || date > new Date(Date.now() + 60 * 24 * 60 * 60 * 1000)}
+                className="rounded-md border border-electric-700/30"
+              />
+            </CardContent>
+          </Card>
+
+          {/* Time Selection */}
+          <Card className="border-electric-700/30 bg-background/50 backdrop-blur-lg">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-electric-400">
+                <Clock className="h-5 w-5" />
+                Select Time
+              </CardTitle>
+              <CardDescription>Choose your preferred time slot</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-3 gap-2">
+                {timeSlots.map((time) => (
+                  <Button
+                    key={time}
+                    variant={selectedTime === time ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setSelectedTime(time)}
+                    className={selectedTime === time ? "bg-electric-500 hover:bg-electric-600" : ""}
+                  >
+                    {time}
+                  </Button>
+                ))}
+              </div>
+              {selectedTime && (
+                <div className="mt-4 p-3 bg-electric-500/10 rounded-lg">
+                  <p className="text-sm">
+                    <strong>Selected:</strong> {selectedDate?.toLocaleDateString()} at {selectedTime}
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Private Session Form */}
+      {selectedPrivateSession && selectedDate && selectedTime && (
+        <Card className="border-electric-700/30 bg-background/50 backdrop-blur-lg">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-electric-400">
+              {getSessionIcon(selectedPrivateSession.type)}
+              Complete Your Booking
+            </CardTitle>
+            <CardDescription>Fill in your details to complete the booking and payment</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="private-name">Full Name</Label>
+                <Input
+                  id="private-name"
+                  value={formData.name}
+                  onChange={(e) => handleInputChange("name", e.target.value)}
+                  placeholder="Enter your full name"
+                  className="border-electric-700/30 bg-background/50"
                 />
-              </CardContent>
-            </Card>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="private-email">Email Address</Label>
+                <Input
+                  id="private-email"
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => handleInputChange("email", e.target.value)}
+                  placeholder="Enter your email"
+                  className="border-electric-700/30 bg-background/50"
+                />
+              </div>
+            </div>
 
-            {/* Time Slots Section */}
-            <Card className="border-electric-700/30 bg-background/50 backdrop-blur-lg">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-electric-400">
-                  <Clock className="h-5 w-5" />
-                  Available Time Slots
-                </CardTitle>
-                <CardDescription>
-                  {selectedDate
-                    ? `Sessions for ${selectedDate.toLocaleDateString()}`
-                    : "Select a date to see available times"}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {selectedDate ? (
-                  timeSlots.map((slot) => (
-                    <div
-                      key={slot.id}
-                      className={`p-4 rounded-lg border transition-all cursor-pointer ${
-                        selectedTimeSlot?.id === slot.id
-                          ? "border-electric-500 bg-electric-500/10"
-                          : slot.available && canBookTier(slot.tierRequired)
-                            ? "border-electric-700/30 hover:border-electric-500/50 hover:bg-electric-500/5"
-                            : "border-gray-700/30 bg-gray-500/5 cursor-not-allowed opacity-50"
-                      }`}
-                      onClick={() => {
-                        if (slot.available && canBookTier(slot.tierRequired)) {
-                          setSelectedTimeSlot(slot)
-                        }
-                      }}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          {getTierIcon(slot.tierRequired)}
-                          <div>
-                            <div className="font-semibold text-lg">{slot.time}</div>
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                              <Users className="h-4 w-4" />
-                              {slot.currentParticipants}/{slot.maxParticipants} participants
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex flex-col items-end gap-2">
-                          {getTierBadge(slot.tierRequired)}
-                          {!slot.available && <Badge variant="destructive">Full</Badge>}
-                          {!canBookTier(slot.tierRequired) && (
-                            <Badge variant="outline" className="text-yellow-400 border-yellow-400/50">
-                              Upgrade Required
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <CalendarIcon className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>Select a date to view available time slots</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            {selectedPrivateSession.type === "whatsapp" && (
+              <div className="space-y-2">
+                <Label htmlFor="whatsapp">WhatsApp Number (with country code)</Label>
+                <Input
+                  id="whatsapp"
+                  value={formData.whatsappNumber}
+                  onChange={(e) => handleInputChange("whatsappNumber", e.target.value)}
+                  placeholder="+1 234 567 8900"
+                  className="border-electric-700/30 bg-background/50"
+                />
+              </div>
+            )}
+
+            {selectedPrivateSession.type === "signal" && (
+              <div className="space-y-2">
+                <Label htmlFor="signal">Signal Username</Label>
+                <Input
+                  id="signal"
+                  value={formData.signalUsername}
+                  onChange={(e) => handleInputChange("signalUsername", e.target.value)}
+                  placeholder="@yourusername"
+                  className="border-electric-700/30 bg-background/50"
+                />
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="private-requests">Special Requests or Topics</Label>
+              <Textarea
+                id="private-requests"
+                value={formData.specialRequests}
+                onChange={(e) => handleInputChange("specialRequests", e.target.value)}
+                placeholder="What would you like to discuss with Kelvin? Any specific topics or questions?"
+                className="border-electric-700/30 bg-background/50"
+                rows={4}
+              />
+            </div>
+
+            <div className="p-4 rounded-lg bg-electric-500/10 border border-electric-500/30">
+              <h4 className="font-semibold mb-2">Booking Summary:</h4>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="text-muted-foreground">Type:</span>
+                  <span className="ml-2 capitalize">{selectedPrivateSession.type}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Duration:</span>
+                  <span className="ml-2">{selectedPrivateSession.duration} minutes</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Date:</span>
+                  <span className="ml-2">{selectedDate.toLocaleDateString()}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Time:</span>
+                  <span className="ml-2">{selectedTime}</span>
+                </div>
+                <div className="col-span-2">
+                  <span className="text-muted-foreground">Price:</span>
+                  <span className="ml-2 font-semibold text-electric-400">${selectedPrivateSession.price}</span>
+                </div>
+              </div>
+            </div>
+
+            <Button
+              onClick={handleStripeCheckout}
+              disabled={isBooking || !user}
+              className="w-full bg-gradient-electric hover:animate-electric-pulse"
+              size="lg"
+            >
+              {isBooking ? (
+                "Processing..."
+              ) : user ? (
+                <>
+                  <CreditCard className="h-4 w-4 mr-2" />
+                  Pay ${selectedPrivateSession.price} & Book Session
+                </>
+              ) : (
+                "Sign In to Book"
+              )}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  )
+}
+
+// Payment Success Component
+function PaymentSuccessCard({
+  sessionBooking,
+  selectedSession,
+  getSessionIcon,
+}: {
+  sessionBooking: any
+  selectedSession: PrivateSession | null
+  getSessionIcon: any
+}) {
+  const { toast } = useToast()
+
+  const handleSignalContact = () => {
+    const signalNumber = "+1234567890" // Replace with actual Signal number
+    toast({
+      title: "Signal Contact Info",
+      description: `Open Signal and message/call: ${signalNumber}`,
+    })
+  }
+
+  const handleWhatsAppCall = () => {
+    const whatsappNumber = "1234567890" // Replace with actual WhatsApp number
+    const message = encodeURIComponent(
+      `Hi Kelvin! I've just booked a ${selectedSession?.type} session for ${sessionBooking.scheduled_date} at ${sessionBooking.scheduled_time}. Looking forward to our call!`,
+    )
+    const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${message}`
+    window.open(whatsappUrl, "_blank")
+  }
+
+  const handleVideoCall = () => {
+    // This would redirect to the Daily.co room or video call platform
+    const videoUrl = sessionBooking.video_call_url || "/meet-and-greet?tab=live"
+    window.open(videoUrl, "_blank")
+  }
+
+  const getCallButton = () => {
+    switch (selectedSession?.type) {
+      case "signal":
+        return (
+          <Button onClick={handleSignalContact} className="w-full bg-blue-500 hover:bg-blue-600">
+            <Shield className="h-4 w-4 mr-2" />
+            Contact via Signal
+            <ExternalLink className="h-4 w-4 ml-2" />
+          </Button>
+        )
+      case "whatsapp":
+        return (
+          <Button onClick={handleWhatsAppCall} className="w-full bg-green-500 hover:bg-green-600">
+            <MessageCircle className="h-4 w-4 mr-2" />
+            Start WhatsApp Video Call
+            <ExternalLink className="h-4 w-4 ml-2" />
+          </Button>
+        )
+      case "video":
+        return (
+          <Button onClick={handleVideoCall} className="w-full bg-purple-500 hover:bg-purple-600">
+            <Video className="h-4 w-4 mr-2" />
+            Join Video Call
+            <ExternalLink className="h-4 w-4 ml-2" />
+          </Button>
+        )
+      default:
+        return null
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Success Confirmation */}
+      <Card className="border-green-500/30 bg-green-500/10">
+        <CardHeader className="text-center">
+          <div className="mx-auto w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mb-4">
+            <CheckCircle className="h-8 w-8 text-green-500" />
           </div>
-
-          {/* Group Booking Summary */}
-          {selectedDate && selectedTimeSlot && formData.name && formData.email && (
-            <Card className="border-electric-700/30 bg-background/50 backdrop-blur-lg">
-              <CardHeader>
-                <CardTitle className="text-electric-400">Group Session Summary</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                  <div className="text-center p-4 rounded-lg bg-electric-500/10 border border-electric-500/30">
-                    <CalendarIcon className="h-8 w-8 mx-auto mb-2 text-electric-400" />
-                    <div className="font-semibold">{selectedDate.toLocaleDateString()}</div>
-                    <div className="text-sm text-muted-foreground">Date</div>
-                  </div>
-                  <div className="text-center p-4 rounded-lg bg-electric-500/10 border border-electric-500/30">
-                    <Clock className="h-8 w-8 mx-auto mb-2 text-electric-400" />
-                    <div className="font-semibold">{selectedTimeSlot.time}</div>
-                    <div className="text-sm text-muted-foreground">Time</div>
-                  </div>
-                  <div className="text-center p-4 rounded-lg bg-electric-500/10 border border-electric-500/30">
-                    <Users className="h-8 w-8 mx-auto mb-2 text-electric-400" />
-                    <div className="font-semibold">
-                      {selectedTimeSlot.currentParticipants + 1}/{selectedTimeSlot.maxParticipants}
-                    </div>
-                    <div className="text-sm text-muted-foreground">Participants</div>
-                  </div>
-                </div>
-                <Button
-                  onClick={handleGroupBooking}
-                  disabled={isBooking || !user}
-                  className="w-full bg-gradient-electric hover:animate-electric-pulse"
-                  size="lg"
-                >
-                  {isBooking ? "Booking..." : user ? "Confirm Group Session" : "Sign In to Book"}
-                </Button>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-
-        {/* Private Sessions Tab */}
-        <TabsContent value="private" className="space-y-8">
-          {/* Private Session Options */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {privateSessions.map((session) => (
-              <Card
-                key={session.id}
-                className={`cursor-pointer transition-all border-2 ${
-                  selectedPrivateSession?.id === session.id
-                    ? "border-electric-500 bg-electric-500/10"
-                    : canBookTier(session.tierRequired)
-                      ? "border-electric-700/30 hover:border-electric-500/50"
-                      : "border-gray-700/30 opacity-50 cursor-not-allowed"
-                }`}
-                onClick={() => {
-                  if (canBookTier(session.tierRequired)) {
-                    setSelectedPrivateSession(session)
-                  }
-                }}
-              >
-                <CardHeader className="text-center">
-                  <div className="flex justify-center mb-2">{getSessionIcon(session.type)}</div>
-                  <CardTitle className="capitalize">{session.type} Session</CardTitle>
-                  <CardDescription className="text-2xl font-bold text-electric-400">${session.price}</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="text-center">
-                    <Badge className="mb-2">{session.duration} minutes</Badge>
-                    <div className="mb-2">{getTierBadge(session.tierRequired)}</div>
-                  </div>
-                  <p className="text-sm text-muted-foreground text-center">{session.description}</p>
-
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-sm">
-                      <CheckCircle className="h-4 w-4 text-green-500" />
-                      <span>One-on-one with Kelvin</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <CheckCircle className="h-4 w-4 text-green-500" />
-                      <span>Flexible scheduling</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <CheckCircle className="h-4 w-4 text-green-500" />
-                      <span>Private & secure</span>
-                    </div>
-                    {session.type === "video" && (
-                      <div className="flex items-center gap-2 text-sm">
-                        <CheckCircle className="h-4 w-4 text-green-500" />
-                        <span>Recording included</span>
-                      </div>
-                    )}
-                  </div>
-
-                  {!canBookTier(session.tierRequired) && (
-                    <Badge variant="outline" className="w-full justify-center text-yellow-400 border-yellow-400/50">
-                      Upgrade to {session.tierRequired} Required
-                    </Badge>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
+          <CardTitle className="text-green-400">Payment Successful!</CardTitle>
+          <CardDescription>Your private session has been confirmed and paid for.</CardDescription>
+        </CardHeader>
+        <CardContent className="text-center">
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            <div className="p-3 rounded-lg bg-background/50">
+              <div className="font-semibold">Session Type</div>
+              <div className="text-sm text-muted-foreground capitalize">{selectedSession?.type}</div>
+            </div>
+            <div className="p-3 rounded-lg bg-background/50">
+              <div className="font-semibold">Duration</div>
+              <div className="text-sm text-muted-foreground">{selectedSession?.duration} minutes</div>
+            </div>
+            <div className="p-3 rounded-lg bg-background/50">
+              <div className="font-semibold">Date</div>
+              <div className="text-sm text-muted-foreground">{sessionBooking.scheduled_date}</div>
+            </div>
+            <div className="p-3 rounded-lg bg-background/50">
+              <div className="font-semibold">Time</div>
+              <div className="text-sm text-muted-foreground">{sessionBooking.scheduled_time}</div>
+            </div>
           </div>
+        </CardContent>
+      </Card>
 
-          {/* Private Session Form */}
-          {selectedPrivateSession && (
-            <Card className="border-electric-700/30 bg-background/50 backdrop-blur-lg">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-electric-400">
-                  {getSessionIcon(selectedPrivateSession.type)}
-                  Private {selectedPrivateSession.type.toUpperCase()} Session Details
-                </CardTitle>
-                <CardDescription>
-                  Fill in your details for the private session. Kelvin will contact you within 24 hours to schedule.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="private-name">Full Name</Label>
-                    <Input
-                      id="private-name"
-                      value={formData.name}
-                      onChange={(e) => handleInputChange("name", e.target.value)}
-                      placeholder="Enter your full name"
-                      className="border-electric-700/30 bg-background/50"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="private-email">Email Address</Label>
-                    <Input
-                      id="private-email"
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) => handleInputChange("email", e.target.value)}
-                      placeholder="Enter your email"
-                      className="border-electric-700/30 bg-background/50"
-                    />
-                  </div>
+      {/* Call Rules */}
+      <Card className="border-electric-700/30">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Shield className="h-5 w-5 text-blue-500" />
+            Call Rules & Guidelines
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            <div className="flex items-start gap-3">
+              <Clock className="h-5 w-5 text-electric-400 mt-0.5" />
+              <div>
+                <div className="font-medium">Respect Time Limits</div>
+                <div className="text-sm text-muted-foreground">
+                  Your session is {selectedSession?.duration} minutes. Please be mindful of time.
                 </div>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <Video className="h-5 w-5 text-electric-400 mt-0.5" />
+              <div>
+                <div className="font-medium">Video Only</div>
+                <div className="text-sm text-muted-foreground">Please keep your video on during the call.</div>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <CheckCircle className="h-5 w-5 text-electric-400 mt-0.5" />
+              <div>
+                <div className="font-medium">Be Punctual</div>
+                <div className="text-sm text-muted-foreground">Be ready 5 minutes before your scheduled time.</div>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <Shield className="h-5 w-5 text-electric-400 mt-0.5" />
+              <div>
+                <div className="font-medium">Respectful Interaction</div>
+                <div className="text-sm text-muted-foreground">Keep the conversation respectful and appropriate.</div>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-                {selectedPrivateSession.type === "whatsapp" && (
-                  <div className="space-y-2">
-                    <Label htmlFor="whatsapp">WhatsApp Number (with country code)</Label>
-                    <Input
-                      id="whatsapp"
-                      value={formData.whatsappNumber}
-                      onChange={(e) => handleInputChange("whatsappNumber", e.target.value)}
-                      placeholder="+1 234 567 8900"
-                      className="border-electric-700/30 bg-background/50"
-                    />
-                  </div>
-                )}
-
-                {selectedPrivateSession.type === "facetime" && (
-                  <div className="space-y-2">
-                    <Label htmlFor="appleid">Apple ID (Email or Phone)</Label>
-                    <Input
-                      id="appleid"
-                      value={formData.appleId}
-                      onChange={(e) => handleInputChange("appleId", e.target.value)}
-                      placeholder="your.email@example.com or +1234567890"
-                      className="border-electric-700/30 bg-background/50"
-                    />
-                  </div>
-                )}
-
-                <div className="space-y-2">
-                  <Label htmlFor="preferred-time">Preferred Time/Date</Label>
-                  <Input
-                    id="preferred-time"
-                    value={formData.preferredTime}
-                    onChange={(e) => handleInputChange("preferredTime", e.target.value)}
-                    placeholder="e.g., Weekends, evenings, specific dates"
-                    className="border-electric-700/30 bg-background/50"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="private-requests">Special Requests or Topics</Label>
-                  <Textarea
-                    id="private-requests"
-                    value={formData.specialRequests}
-                    onChange={(e) => handleInputChange("specialRequests", e.target.value)}
-                    placeholder="What would you like to discuss with Kelvin? Any specific topics or questions?"
-                    className="border-electric-700/30 bg-background/50"
-                    rows={4}
-                  />
-                </div>
-
-                <div className="p-4 rounded-lg bg-electric-500/10 border border-electric-500/30">
-                  <h4 className="font-semibold mb-2">Session Summary:</h4>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="text-muted-foreground">Type:</span>
-                      <span className="ml-2 capitalize">{selectedPrivateSession.type}</span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Duration:</span>
-                      <span className="ml-2">{selectedPrivateSession.duration} minutes</span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Price:</span>
-                      <span className="ml-2 font-semibold text-electric-400">${selectedPrivateSession.price}</span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Tier:</span>
-                      <span className="ml-2 capitalize">{selectedPrivateSession.tierRequired}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <Button
-                  onClick={handlePrivateBooking}
-                  disabled={isBooking || !user}
-                  className="w-full bg-gradient-electric hover:animate-electric-pulse"
-                  size="lg"
-                >
-                  {isBooking
-                    ? "Booking..."
-                    : user
-                      ? `Book ${selectedPrivateSession.type.toUpperCase()} Session - $${selectedPrivateSession.price}`
-                      : "Sign In to Book"}
-                </Button>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-      </Tabs>
+      {/* Call Button */}
+      <Card className="border-electric-700/30">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-electric-400">
+            {selectedSession && getSessionIcon(selectedSession.type)}
+            Ready for Your Call?
+          </CardTitle>
+          <CardDescription>Click the button below when it's time for your scheduled session</CardDescription>
+        </CardHeader>
+        <CardContent>{getCallButton()}</CardContent>
+      </Card>
     </div>
   )
 }

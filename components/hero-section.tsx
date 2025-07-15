@@ -10,7 +10,7 @@ import { SuperFans } from "@/components/super-fans"
 const heroSlides = [
   {
     id: 1,
-    image: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=1920&h=1080&fit=crop",
+    image: "https://hxmw6qbp8f.ufs.sh/f/QnTCG6I2Leiv9lzV2oWyulGLqpDaYEF3fP8HBOxeAZc1j5mK",
     video: "https://hxmw6qbp8f.ufs.sh/f/QnTCG6I2LeivKD01MDiWuPikrJS6j87M4CnUXTZIGtLdeaQR",
     title: "Live Performance",
     subtitle: "Experience the Electric Energy",
@@ -21,7 +21,7 @@ const heroSlides = [
   },
   {
     id: 2,
-    image: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=1920&h=1080&fit=crop",
+    image: "https://hxmw6qbp8f.ufs.sh/f/QnTCG6I2Leiv9lzV2oWyulGLqpDaYEF3fP8HBOxeAZc1j5mK",
     title: "Studio Sessions",
     subtitle: "Behind the Music",
     description: "Get exclusive access to studio recordings and creative process",
@@ -31,7 +31,7 @@ const heroSlides = [
   },
   {
     id: 3,
-    image: "https://images.unsplash.com/photo-1516280440614-37939bbacd81?w=1920&h=1080&fit=crop",
+    image: "https://hxmw6qbp8f.ufs.sh/f/QnTCG6I2LeivYQF3GfxnSiDlqZLVrxRvHF9tJcze062BAUOo",
     title: "Meet & Greet",
     subtitle: "Connect with Kelvin",
     description: "Book personal video sessions and connect with your favorite artist",
@@ -41,7 +41,7 @@ const heroSlides = [
   },
   {
     id: 4,
-    image: "https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=1920&h=1080&fit=crop",
+    image: "https://hxmw6qbp8f.ufs.sh/f/QnTCG6I2Leivihm19hEOvJReNlH5IQ6gtnE1o3x2W0SVKTAB",
     video: "https://hxmw6qbp8f.ufs.sh/f/QnTCG6I2LeivKD01MDiWuPikrJS6j87M4CnUXTZIGtLdeaQR",
     title: "Exclusive Merch",
     subtitle: "Official Fan Gear",

@@ -4,7 +4,7 @@ import { UpcomingSessions } from "@/components/meet-and-greet/upcoming-sessions"
 import { DailyVideoCall } from "@/components/meet-and-greet/daily-video-call"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Video, Calendar, Users } from "lucide-react"
+import { Video, Calendar, Users, Shield } from "lucide-react"
 
 export default function MeetAndGreetPage() {
   return (
@@ -18,7 +18,7 @@ export default function MeetAndGreetPage() {
         </p>
       </div>
 
-      <Tabs defaultValue="book" className="max-w-4xl mx-auto">
+      <Tabs defaultValue="book" className="max-w-6xl mx-auto">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="book" className="flex items-center gap-2">
             <Calendar className="h-4 w-4" />
@@ -30,6 +30,7 @@ export default function MeetAndGreetPage() {
           </TabsTrigger>
           <TabsTrigger value="live" className="flex items-center gap-2">
             <Video className="h-4 w-4" />
+            <Shield className="h-3 w-3" />
             Live Session
           </TabsTrigger>
         </TabsList>
@@ -75,9 +76,10 @@ export default function MeetAndGreetPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Video className="h-5 w-5 text-electric-500" />
+                <Shield className="h-4 w-4 text-green-500" />
                 Live Video Session
               </CardTitle>
-              <CardDescription>Join your scheduled video call with Kelvin Creekman</CardDescription>
+              <CardDescription>Join your paid video call with Kelvin Creekman</CardDescription>
             </CardHeader>
             <CardContent>
               <Suspense fallback={<div>Loading video call...</div>}>

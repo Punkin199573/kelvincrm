@@ -90,7 +90,7 @@ export default function StorePage() {
       <div className="container py-8 space-y-8">
         <StoreHeader />
         <StoreBanner />
-        <StoreContent />
+        <StoreContent products={products} />
       </div>
     </div>
   )

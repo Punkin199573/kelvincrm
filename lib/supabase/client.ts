@@ -26,7 +26,7 @@ export interface Product {
   name: string
   description?: string
   price: number
-  image_url?: string
+  image_url?: string // UploadThing URL
   category: ProductCategory
   tier_visibility: UserTier[]
   in_stock: boolean
@@ -40,10 +40,13 @@ export interface Product {
 export interface Order {
   id: string
   user_id: string
+  stripe_session_id?: string
   stripe_payment_intent_id?: string
   total_amount: number
   status: OrderStatus
+  items: any[]
   shipping_address?: any
+  tracking_number?: string
   created_at: string
   updated_at: string
 }
@@ -59,12 +62,34 @@ export interface OrderItem {
   created_at: string
 }
 
-export interface Image {
+export interface ImageAsset {
   id: string
   name: string
-  url: string
+  url: string // UploadThing URL
   category: string
   alt_text?: string
   created_at: string
   updated_at: string
+}
+
+// Session booking types
+export interface SessionBooking {
+  id: string
+  user_id: string
+  session_type: "signal" | "whatsapp"
+  amount_paid: number
+  status: "pending" | "confirmed" | "completed" | "cancelled"
+  scheduled_at?: string
+  stripe_payment_intent_id?: string
+  created_at: string
+  updated_at: string
+}
+
+export interface ActiveVideoSession {
+  id: string
+  user_id: string
+  session_id: string
+  is_admin: boolean
+  joined_at: string
+  left_at?: string
 }

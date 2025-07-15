@@ -1,128 +1,128 @@
 import { type NextRequest, NextResponse } from "next/server"
 import Stripe from "stripe"
-import { supabaseAdmin } from "@/lib/supabase/server"
+import { supabase } from "@/lib/supabase/client"
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2024-06-20",
 })
 
-const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!
+const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET!
 
 export async function POST(request: NextRequest) {
+  const body = await request.text()
+  const sig = request.headers.get("stripe-signature")!
+
+  let event: Stripe.Event
+
   try {
-    const body = await request.text()
-    const signature = request.headers.get("stripe-signature")!
+    event = stripe.webhooks.constructEvent(body, sig, endpointSecret)
+  } catch (err: any) {
+    console.error(`Webhook signature verification failed.`, err.message)
+    return NextResponse.json({ error: "Webhook signature verification failed" }, { status: 400 })
+  }
 
-    let event: Stripe.Event
-
-    try {
-      event = stripe.webhooks.constructEvent(body, signature, webhookSecret)
-    } catch (err: any) {
-      console.error("Webhook signature verification failed:", err.message)
-      return NextResponse.json({ error: "Invalid signature" }, { status: 400 })
-    }
-
+  try {
     switch (event.type) {
       case "checkout.session.completed":
         const session = event.data.object as Stripe.Checkout.Session
-        await handleCheckoutCompleted(session)
-        break
 
-      case "customer.subscription.created":
-      case "customer.subscription.updated":
-        const subscription = event.data.object as Stripe.Subscription
-        await handleSubscriptionChange(subscription)
+        // Check if this is a session booking
+        if (session.metadata?.sessionType) {
+          await handleSessionBooking(session)
+        } else {
+          // Handle regular store orders
+          await handleStoreOrder(session)
+        }
         break
 
       case "payment_intent.succeeded":
         const paymentIntent = event.data.object as Stripe.PaymentIntent
-        await handlePaymentSucceeded(paymentIntent)
+        console.log("Payment succeeded:", paymentIntent.id)
         break
 
       default:
-        console.log(`Unhandled event type: ${event.type}`)
+        console.log(`Unhandled event type ${event.type}`)
     }
 
     return NextResponse.json({ received: true })
   } catch (error: any) {
-    console.error("Webhook error:", error)
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    console.error("Error processing webhook:", error)
+    return NextResponse.json({ error: "Webhook processing failed" }, { status: 500 })
   }
 }
 
-async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
-  try {
-    const customer = await stripe.customers.retrieve(session.customer as string)
+async function handleSessionBooking(session: Stripe.Checkout.Session) {
+  const { sessionType, userId, scheduledDate, scheduledTime, duration, userInfo } = session.metadata!
 
-    if (customer.deleted) return
+  const userInfoParsed = JSON.parse(userInfo!)
 
-    const email = customer.email
-    const tier = session.metadata?.tier
-    const isSignup = session.metadata?.signup === "true"
+  // Create session booking record
+  const { error } = await supabase.from("session_bookings").insert({
+    user_id: userId,
+    session_type: sessionType,
+    session_duration: Number.parseInt(duration!),
+    amount_paid: (session.amount_total || 0) / 100,
+    scheduled_date: scheduledDate,
+    scheduled_time: scheduledTime,
+    contact_info: {
+      whatsapp: userInfoParsed.whatsappNumber,
+      signal: userInfoParsed.signalUsername,
+      phone: userInfoParsed.phone,
+    },
+    special_requests: userInfoParsed.specialRequests,
+    status: "confirmed",
+    stripe_session_id: session.id,
+    stripe_payment_intent_id: session.payment_intent as string,
+  })
 
-    if (!email || !tier) return
-
-    if (isSignup) {
-      // Handle signup completion - user account should be created after payment
-      console.log("Signup payment completed for:", email, "tier:", tier)
-    } else {
-      // Handle regular purchase
-      console.log("Purchase completed for:", email)
-    }
-
-    // Update customer with Stripe customer ID
-    const { error } = await supabaseAdmin
-      .from("profiles")
-      .update({
-        stripe_customer_id: session.customer as string,
-        tier: tier as "frost_fan" | "blizzard_vip" | "avalanche_backstage",
-      })
-      .eq("email", email)
-
-    if (error) {
-      console.error("Error updating profile:", error)
-    }
-  } catch (error) {
-    console.error("Error handling checkout completed:", error)
+  if (error) {
+    console.error("Error creating session booking:", error)
+    throw error
   }
+
+  console.log("Session booking created successfully")
 }
 
-async function handleSubscriptionChange(subscription: Stripe.Subscription) {
-  try {
-    const customer = await stripe.customers.retrieve(subscription.customer as string)
+async function handleStoreOrder(session: Stripe.Checkout.Session) {
+  const { userId, items } = session.metadata!
+  const itemsParsed = JSON.parse(items!)
 
-    if (customer.deleted) return
+  // Create order record
+  const { data: order, error: orderError } = await supabase
+    .from("orders")
+    .insert({
+      user_id: userId,
+      stripe_session_id: session.id,
+      stripe_payment_intent_id: session.payment_intent as string,
+      total_amount: (session.amount_total || 0) / 100,
+      status: "processing",
+      items: itemsParsed,
+      shipping_address: session.shipping_details,
+    })
+    .select()
+    .single()
 
-    const email = customer.email
-    if (!email) return
-
-    // Update subscription status in database if needed
-    console.log("Subscription changed for:", email, "status:", subscription.status)
-  } catch (error) {
-    console.error("Error handling subscription change:", error)
+  if (orderError) {
+    console.error("Error creating order:", orderError)
+    throw orderError
   }
-}
 
-async function handlePaymentSucceeded(paymentIntent: Stripe.PaymentIntent) {
-  try {
-    // Handle successful one-time payments (store purchases)
-    console.log("Payment succeeded:", paymentIntent.id)
+  // Create order items
+  for (const item of itemsParsed) {
+    const { error: itemError } = await supabase.from("order_items").insert({
+      order_id: order.id,
+      product_id: item.productId,
+      quantity: item.quantity,
+      price: item.price,
+      size: item.size,
+      color: item.color,
+    })
 
-    // Create order record if this is a store purchase
-    if (paymentIntent.metadata?.order_id) {
-      const { error } = await supabaseAdmin
-        .from("orders")
-        .update({
-          status: "processing",
-          stripe_payment_intent_id: paymentIntent.id,
-        })
-        .eq("id", paymentIntent.metadata.order_id)
-
-      if (error) {
-        console.error("Error updating order:", error)
-      }
+    if (itemError) {
+      console.error("Error creating order item:", itemError)
+      throw itemError
     }
-  } catch (error) {
-    console.error("Error handling payment succeeded:", error)
   }
+
+  console.log("Store order created successfully")
 }
