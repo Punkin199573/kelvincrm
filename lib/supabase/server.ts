@@ -14,3 +14,6 @@ export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
 export const createServerSupabaseClient = () => {
   return createClient(supabaseUrl, supabaseServiceKey)
 }
+
+// Named export for compatibility
+export const supabase = supabaseAdmin
