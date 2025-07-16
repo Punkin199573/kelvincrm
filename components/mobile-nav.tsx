@@ -7,7 +7,7 @@ import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-import { Menu, ShoppingCart, LogOut, Settings } from "lucide-react"
+import { ShoppingCart, LogOut, Settings, PanelLeft, Home, BookOpen, Calendar, Store, Users } from "lucide-react" // Added PanelLeft and other icons
 import { useAuth } from "@/components/auth/auth-provider"
 import { useCart } from "@/components/store/cart-context"
 import { ModeToggle } from "@/components/mode-toggle"
@@ -19,11 +19,11 @@ export function MobileNav() {
   const { state } = useCart()
 
   const routes = [
-    { href: "/", label: "Home" },
-    { href: "/content", label: "Content" },
-    { href: "/events", label: "Events" },
-    { href: "/store", label: "Store" },
-    { href: "/meet-and-greet", label: "Meet & Greet" },
+    { href: "/", label: "Home", icon: Home },
+    { href: "/content", label: "Content", icon: BookOpen },
+    { href: "/events", label: "Events", icon: Calendar },
+    { href: "/store", label: "Store", icon: Store },
+    { href: "/meet-and-greet", label: "Meet & Greet", icon: Users },
   ]
 
   const handleSignOut = async () => {
@@ -41,13 +41,17 @@ export function MobileNav() {
         <Button
           variant="ghost"
           className="mr-2 px-0 text-base hover:bg-transparent focus-visible:bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 md:hidden hover:text-electric-400 transition-colors"
+          aria-label="Open mobile navigation menu"
         >
-          <Menu className="h-6 w-6" />
+          <PanelLeft className="h-6 w-6" /> {/* Changed to PanelLeft icon */}
           <span className="sr-only">Toggle Menu</span>
         </Button>
       </SheetTrigger>
-      <SheetContent side="left" className="pr-0 bg-background/95 backdrop-blur-lg border-electric-700/30 w-80">
-        <div className="px-6 py-4">
+      <SheetContent
+        side="left"
+        className="pr-0 bg-background/95 backdrop-blur-lg border-electric-700/30 w-[calc(100vw-4rem)] sm:w-80 overflow-y-auto" // Adjusted width for better responsiveness
+      >
+        <div className="px-6 py-4 border-b border-electric-700/20">
           <Link href="/" className="flex items-center space-x-3" onClick={() => setOpen(false)}>
             <div className="relative group">
               <Image
@@ -70,23 +74,33 @@ export function MobileNav() {
             </div>
           </Link>
         </div>
-        <div className="my-4 h-[calc(100vh-8rem)] pb-10 pl-6">
-          <div className="flex flex-col space-y-4">
-            {routes.map((route) => (
-              <Link
-                key={route.href}
-                href={route.href}
-                onClick={() => setOpen(false)}
-                className={cn(
-                  "transition-colors hover:text-electric-400 text-base font-medium py-2 px-2 rounded-md hover:bg-electric-500/10",
-                  pathname === route.href ? "text-electric-400 frost-text bg-electric-500/20" : "text-muted-foreground",
-                )}
-              >
-                {route.label}
-              </Link>
-            ))}
+        <nav className="my-4 h-[calc(100vh-8rem)] pb-10 pl-6">
+          <div className="flex flex-col space-y-2">
+            {" "}
+            {/* Adjusted spacing */}
+            {routes.map((route) => {
+              const Icon = route.icon // Get the icon component
+              return (
+                <Link
+                  key={route.href}
+                  href={route.href}
+                  onClick={() => setOpen(false)}
+                  className={cn(
+                    "flex items-center transition-colors hover:text-electric-400 text-base font-medium py-2 px-2 rounded-md hover:bg-electric-500/10",
+                    pathname === route.href
+                      ? "text-electric-400 frost-text bg-electric-500/20"
+                      : "text-muted-foreground",
+                  )}
+                >
+                  <Icon className="h-5 w-5 mr-3" /> {/* Render the icon */}
+                  {route.label}
+                </Link>
+              )
+            })}
           </div>
-          <div className="mt-8 space-y-4">
+          <div className="mt-8 space-y-2 border-t border-electric-700/20 pt-4">
+            {" "}
+            {/* Added border and padding */}
             <Link href="/store/cart" onClick={() => setOpen(false)}>
               <Button
                 variant="ghost"
@@ -102,7 +116,9 @@ export function MobileNav() {
                 )}
               </Button>
             </Link>
-            <div className="flex items-center justify-start px-2">
+            <div className="flex items-center justify-start px-2 py-3">
+              {" "}
+              {/* Adjusted padding */}
               <ModeToggle />
               <span className="ml-3 text-sm text-muted-foreground">Theme</span>
             </div>
@@ -162,7 +178,7 @@ export function MobileNav() {
               </>
             )}
           </div>
-        </div>
+        </nav>
       </SheetContent>
     </Sheet>
   )
