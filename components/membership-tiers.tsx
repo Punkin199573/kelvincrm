@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 const tiers = [
   {
     name: "Frost Fan",
-    price: "$9.99",
+    price: "$10",
     description: "Perfect for casual fans who want a taste of the experience",
     features: [
       "Access to select exclusive content",
