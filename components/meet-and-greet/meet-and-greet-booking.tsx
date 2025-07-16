@@ -1,600 +1,394 @@
 "use client"
 
 import { useState } from "react"
-import { Calendar } from "@/components/ui/calendar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Calendar } from "@/components/ui/calendar"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Clock, Video, MessageCircle, Shield, CheckCircle, CreditCard, CalendarIcon, ExternalLink } from "lucide-react"
+import { Separator } from "@/components/ui/separator"
 import { useAuth } from "@/components/auth/auth-provider"
 import { useToast } from "@/hooks/use-toast"
-import { supabase } from "@/lib/supabase/client"
-import { loadStripe } from "@stripe/stripe-js"
-import React from "react"
+import { CalendarDays, Clock, Video, MessageCircle, Phone, Loader2, CheckCircle, Users } from "lucide-react"
+import { format } from "date-fns"
 
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
-
-interface PrivateSession {
-  id: string
-  type: "whatsapp" | "signal" | "video"
-  duration: number
-  price: number
-  description: string
-  features: string[]
-}
-
-const privateSessions: PrivateSession[] = [
-  {
-    id: "whatsapp",
-    type: "whatsapp",
-    duration: 30,
-    price: 150,
-    description: "Private WhatsApp video call with Kelvin. Perfect for personal conversations and getting advice.",
-    features: ["One-on-one with Kelvin", "WhatsApp video call", "30 minutes duration", "Flexible scheduling"],
-  },
-  {
-    id: "signal",
-    type: "signal",
-    duration: 45,
-    price: 200,
-    description: "Exclusive Signal video session with Kelvin. High-quality, secure video call experience.",
-    features: ["One-on-one with Kelvin", "Signal video call", "45 minutes duration", "End-to-end encrypted"],
-  },
-  {
-    id: "video",
-    type: "video",
-    duration: 60,
-    price: 300,
-    description: "Premium private video session with screen sharing and recording included.",
-    features: ["One-on-one with Kelvin", "Daily.co video call", "60 minutes duration", "Recording included"],
-  },
-]
+type CallMethod = "whatsapp" | "signal" | "daily"
 
 const timeSlots = [
   "09:00",
+  "09:30",
   "10:00",
+  "10:30",
   "11:00",
-  "12:00",
-  "13:00",
+  "11:30",
   "14:00",
+  "14:30",
   "15:00",
+  "15:30",
   "16:00",
-  "17:00",
-  "18:00",
+  "16:30",
   "19:00",
+  "19:30",
   "20:00",
+  "20:30",
+  "21:00",
+  "21:30",
 ]
 
-export function MeetAndGreetBooking() {
-  const [selectedPrivateSession, setSelectedPrivateSession] = useState<PrivateSession | null>(null)
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined)
-  const [selectedTime, setSelectedTime] = useState<string>("")
-  const [isBooking, setIsBooking] = useState(false)
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    whatsappNumber: "",
-    signalUsername: "",
-    specialRequests: "",
-  })
-  const [paymentStatus, setPaymentStatus] = useState<"idle" | "processing" | "success" | "error">("idle")
-  const [sessionBooking, setSessionBooking] = useState<any>(null)
+const callMethods = [
+  {
+    id: "whatsapp" as CallMethod,
+    name: "WhatsApp Video",
+    icon: MessageCircle,
+    description: "Video call via WhatsApp",
+    color: "text-green-600",
+  },
+  {
+    id: "signal" as CallMethod,
+    name: "Signal Call",
+    icon: Phone,
+    description: "Secure call via Signal",
+    color: "text-blue-600",
+  },
+  {
+    id: "daily" as CallMethod,
+    name: "Daily.co Room",
+    icon: Video,
+    description: "Browser-based video call",
+    color: "text-purple-600",
+  },
+]
 
+interface PaymentSuccessProps {
+  callMethod: CallMethod
+  sessionDate: Date
+  timeSlot: string
+  onClose: () => void
+}
+
+function PaymentSuccess({ callMethod, sessionDate, timeSlot, onClose }: PaymentSuccessProps) {
+  const handleProceedToCall = () => {
+    const method = callMethods.find((m) => m.id === callMethod)
+
+    if (callMethod === "whatsapp") {
+      const message = encodeURIComponent(
+        `Hi Kelvin! I have a scheduled private session on ${format(sessionDate, "PPP")} at ${timeSlot}. Ready for our video call!`,
+      )
+      window.open(`https://wa.me/1234567890?text=${message}`, "_blank")
+    } else if (callMethod === "signal") {
+      // Signal doesn't support deep links, show instructions
+      alert("Please open Signal app and contact: +1 (234) 567-8900 or username: @kelvincrm")
+    } else if (callMethod === "daily") {
+      // This would redirect to the Daily.co room
+      window.open("/meet-and-greet?tab=live", "_blank")
+    }
+  }
+
+  const getCallButtonText = () => {
+    switch (callMethod) {
+      case "whatsapp":
+        return "Open WhatsApp"
+      case "signal":
+        return "Get Signal Info"
+      case "daily":
+        return "Join Video Room"
+      default:
+        return "Proceed to Call"
+    }
+  }
+
+  return (
+    <Card className="border-green-500/20 bg-green-50/50 dark:bg-green-950/20">
+      <CardHeader className="text-center">
+        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-green-100 dark:bg-green-900">
+          <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
+        </div>
+        <CardTitle className="text-green-800 dark:text-green-200">Payment Successful!</CardTitle>
+        <CardDescription className="text-green-600 dark:text-green-400">
+          Your private session with Kelvin has been booked
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {/* Session Details */}
+        <div className="rounded-lg bg-background/50 p-4 space-y-2">
+          <div className="flex items-center gap-2 text-sm">
+            <CalendarDays className="h-4 w-4 text-muted-foreground" />
+            <span>{format(sessionDate, "PPP")}</span>
+          </div>
+          <div className="flex items-center gap-2 text-sm">
+            <Clock className="h-4 w-4 text-muted-foreground" />
+            <span>{timeSlot} (15 minutes)</span>
+          </div>
+          <div className="flex items-center gap-2 text-sm">
+            <Video className="h-4 w-4 text-muted-foreground" />
+            <span>{callMethods.find((m) => m.id === callMethod)?.name}</span>
+          </div>
+        </div>
+
+        {/* Call Rules */}
+        <div className="space-y-3">
+          <h4 className="font-semibold text-sm">Video Call Guidelines:</h4>
+          <ul className="space-y-1 text-sm text-muted-foreground">
+            <li>• Be punctual - session starts exactly at scheduled time</li>
+            <li>• Keep video on throughout the call</li>
+            <li>• Session duration is strictly 15 minutes</li>
+            <li>• Be respectful and professional</li>
+            <li>• Have good lighting and stable internet</li>
+            <li>• No recording or screenshots allowed</li>
+          </ul>
+        </div>
+
+        <Separator />
+
+        {/* Action Buttons */}
+        <div className="space-y-3">
+          <Button
+            onClick={handleProceedToCall}
+            className="w-full bg-gradient-fire dark:bg-gradient-ice hover:opacity-90"
+          >
+            {getCallButtonText()}
+          </Button>
+          <Button variant="outline" onClick={onClose} className="w-full bg-transparent">
+            Close
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+export function MeetAndGreetBooking() {
+  const [selectedDate, setSelectedDate] = useState<Date>()
+  const [selectedTime, setSelectedTime] = useState<string>()
+  const [selectedMethod, setSelectedMethod] = useState<CallMethod>()
+  const [isLoading, setIsLoading] = useState(false)
+  const [showSuccess, setShowSuccess] = useState(false)
   const { user } = useAuth()
   const { toast } = useToast()
 
-  const getSessionIcon = (type: string) => {
-    switch (type) {
-      case "whatsapp":
-        return <MessageCircle className="h-5 w-5 text-green-500" />
-      case "signal":
-        return <Shield className="h-5 w-5 text-blue-500" />
-      case "video":
-        return <Video className="h-5 w-5 text-purple-500" />
-      default:
-        return <Video className="h-5 w-5" />
-    }
-  }
-
-  const handleInputChange = (field: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }))
-  }
-
-  const handleStripeCheckout = async () => {
-    if (!selectedPrivateSession || !user || !selectedDate || !selectedTime) {
+  const handleBookSession = async () => {
+    if (!user) {
       toast({
-        title: "Missing Information",
-        description: "Please select a session type, date, time, and ensure you're logged in.",
+        title: "Authentication required",
+        description: "Please sign in to book a session.",
         variant: "destructive",
       })
       return
     }
 
-    if (!formData.name || !formData.email) {
+    if (!selectedDate || !selectedTime || !selectedMethod) {
       toast({
-        title: "Missing Information",
-        description: "Please fill in your name and email address.",
+        title: "Missing information",
+        description: "Please select date, time, and call method.",
         variant: "destructive",
       })
       return
     }
 
-    // Validate required contact info based on session type
-    if (selectedPrivateSession.type === "whatsapp" && !formData.whatsappNumber) {
-      toast({
-        title: "WhatsApp Number Required",
-        description: "Please provide your WhatsApp number for the session.",
-        variant: "destructive",
-      })
-      return
-    }
-
-    if (selectedPrivateSession.type === "signal" && !formData.signalUsername) {
-      toast({
-        title: "Signal Username Required",
-        description: "Please provide your Signal username for the session.",
-        variant: "destructive",
-      })
-      return
-    }
-
-    setIsBooking(true)
+    setIsLoading(true)
 
     try {
+      // Create Stripe checkout session
       const response = await fetch("/api/create-session-checkout", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          sessionType: selectedPrivateSession.type,
-          sessionId: selectedPrivateSession.id,
-          amount: selectedPrivateSession.price,
-          duration: selectedPrivateSession.duration,
-          scheduledDate: selectedDate.toISOString().split("T")[0],
-          scheduledTime: selectedTime,
-          userInfo: formData,
-          userId: user.id,
+          sessionDate: selectedDate.toISOString(),
+          timeSlot: selectedTime,
+          callMethod: selectedMethod,
+          amount: 50.0, // $50 for private session
         }),
       })
 
-      const { url, error } = await response.json()
+      const { url } = await response.json()
 
-      if (error) {
-        throw new Error(error)
+      if (url) {
+        // Redirect to Stripe checkout
+        window.location.href = url
       }
-
-      window.location.href = url
-    } catch (error: any) {
-      setIsBooking(false)
+    } catch (error) {
+      console.error("Booking error:", error)
       toast({
-        title: "Error",
-        description: error.message || "Failed to create checkout session",
+        title: "Booking failed",
+        description: "Please try again later.",
         variant: "destructive",
       })
+    } finally {
+      setIsLoading(false)
     }
   }
 
-  // Check if we have a successful payment from URL params
-  React.useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search)
-    const paymentSuccess = urlParams.get("payment") === "success"
-    const sessionId = urlParams.get("session_id")
+  // Check if we're returning from successful payment
+  const urlParams = new URLSearchParams(window.location.search)
+  const paymentSuccess = urlParams.get("payment_success") === "true"
 
-    if (paymentSuccess && sessionId) {
-      // Fetch session details and show success
-      fetchSessionDetails(sessionId)
-    }
-  }, [])
-
-  const fetchSessionDetails = async (sessionId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from("session_bookings")
-        .select("*")
-        .eq("stripe_session_id", sessionId)
-        .single()
-
-      if (error) throw error
-
-      setSessionBooking(data)
-      setPaymentStatus("success")
-
-      // Find the session type
-      const session = privateSessions.find((s) => s.type === data.session_type)
-      setSelectedPrivateSession(session || null)
-    } catch (error) {
-      console.error("Error fetching session details:", error)
-    }
+  if (paymentSuccess && !showSuccess) {
+    setShowSuccess(true)
   }
 
-  if (paymentStatus === "success" && sessionBooking) {
+  if (showSuccess && selectedDate && selectedTime && selectedMethod) {
     return (
-      <PaymentSuccessCard
-        sessionBooking={sessionBooking}
-        selectedSession={selectedPrivateSession}
-        getSessionIcon={getSessionIcon}
+      <PaymentSuccess
+        callMethod={selectedMethod}
+        sessionDate={selectedDate}
+        timeSlot={selectedTime}
+        onClose={() => setShowSuccess(false)}
       />
     )
   }
 
-  return (
-    <div className="space-y-8">
-      {/* Private Session Options */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {privateSessions.map((session, index) => (
-          <Card
-            key={session.id}
-            className={`cursor-pointer transition-all border-2 ${
-              selectedPrivateSession?.id === session.id
-                ? "border-electric-500 bg-electric-500/10 shadow-lg"
-                : "border-electric-700/30 hover:border-electric-500/50 hover:shadow-md"
-            }`}
-            onClick={() => setSelectedPrivateSession(session)}
-          >
-            <CardHeader className="text-center">
-              <div className="flex justify-center mb-2">{getSessionIcon(session.type)}</div>
-              <CardTitle className="capitalize">{session.type} Session</CardTitle>
-              <CardDescription className="text-2xl font-bold text-electric-400">${session.price}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="text-center">
-                <Badge className="mb-2">{session.duration} minutes</Badge>
-              </div>
-              <p className="text-sm text-muted-foreground text-center">{session.description}</p>
-
-              <div className="space-y-2">
-                {session.features.map((feature, featureIndex) => (
-                  <div key={featureIndex} className="flex items-center gap-2 text-sm">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                    <span>{feature}</span>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {/* Date and Time Selection */}
-      {selectedPrivateSession && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Calendar Section */}
-          <Card className="border-electric-700/30 bg-background/50 backdrop-blur-lg">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-electric-400">
-                <CalendarIcon className="h-5 w-5" />
-                Select Date
-              </CardTitle>
-              <CardDescription>Choose your preferred date for the session</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Calendar
-                mode="single"
-                selected={selectedDate}
-                onSelect={setSelectedDate}
-                disabled={(date) => date < new Date() || date > new Date(Date.now() + 60 * 24 * 60 * 60 * 1000)}
-                className="rounded-md border border-electric-700/30"
-              />
-            </CardContent>
-          </Card>
-
-          {/* Time Selection */}
-          <Card className="border-electric-700/30 bg-background/50 backdrop-blur-lg">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-electric-400">
-                <Clock className="h-5 w-5" />
-                Select Time
-              </CardTitle>
-              <CardDescription>Choose your preferred time slot</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-3 gap-2">
-                {timeSlots.map((time) => (
-                  <Button
-                    key={time}
-                    variant={selectedTime === time ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setSelectedTime(time)}
-                    className={selectedTime === time ? "bg-electric-500 hover:bg-electric-600" : ""}
-                  >
-                    {time}
-                  </Button>
-                ))}
-              </div>
-              {selectedTime && (
-                <div className="mt-4 p-3 bg-electric-500/10 rounded-lg">
-                  <p className="text-sm">
-                    <strong>Selected:</strong> {selectedDate?.toLocaleDateString()} at {selectedTime}
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* Private Session Form */}
-      {selectedPrivateSession && selectedDate && selectedTime && (
-        <Card className="border-electric-700/30 bg-background/50 backdrop-blur-lg">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-electric-400">
-              {getSessionIcon(selectedPrivateSession.type)}
-              Complete Your Booking
-            </CardTitle>
-            <CardDescription>Fill in your details to complete the booking and payment</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="private-name">Full Name</Label>
-                <Input
-                  id="private-name"
-                  value={formData.name}
-                  onChange={(e) => handleInputChange("name", e.target.value)}
-                  placeholder="Enter your full name"
-                  className="border-electric-700/30 bg-background/50"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="private-email">Email Address</Label>
-                <Input
-                  id="private-email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => handleInputChange("email", e.target.value)}
-                  placeholder="Enter your email"
-                  className="border-electric-700/30 bg-background/50"
-                />
-              </div>
-            </div>
-
-            {selectedPrivateSession.type === "whatsapp" && (
-              <div className="space-y-2">
-                <Label htmlFor="whatsapp">WhatsApp Number (with country code)</Label>
-                <Input
-                  id="whatsapp"
-                  value={formData.whatsappNumber}
-                  onChange={(e) => handleInputChange("whatsappNumber", e.target.value)}
-                  placeholder="+1 234 567 8900"
-                  className="border-electric-700/30 bg-background/50"
-                />
-              </div>
-            )}
-
-            {selectedPrivateSession.type === "signal" && (
-              <div className="space-y-2">
-                <Label htmlFor="signal">Signal Username</Label>
-                <Input
-                  id="signal"
-                  value={formData.signalUsername}
-                  onChange={(e) => handleInputChange("signalUsername", e.target.value)}
-                  placeholder="@yourusername"
-                  className="border-electric-700/30 bg-background/50"
-                />
-              </div>
-            )}
-
-            <div className="space-y-2">
-              <Label htmlFor="private-requests">Special Requests or Topics</Label>
-              <Textarea
-                id="private-requests"
-                value={formData.specialRequests}
-                onChange={(e) => handleInputChange("specialRequests", e.target.value)}
-                placeholder="What would you like to discuss with Kelvin? Any specific topics or questions?"
-                className="border-electric-700/30 bg-background/50"
-                rows={4}
-              />
-            </div>
-
-            <div className="p-4 rounded-lg bg-electric-500/10 border border-electric-500/30">
-              <h4 className="font-semibold mb-2">Booking Summary:</h4>
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span className="text-muted-foreground">Type:</span>
-                  <span className="ml-2 capitalize">{selectedPrivateSession.type}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Duration:</span>
-                  <span className="ml-2">{selectedPrivateSession.duration} minutes</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Date:</span>
-                  <span className="ml-2">{selectedDate.toLocaleDateString()}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Time:</span>
-                  <span className="ml-2">{selectedTime}</span>
-                </div>
-                <div className="col-span-2">
-                  <span className="text-muted-foreground">Price:</span>
-                  <span className="ml-2 font-semibold text-electric-400">${selectedPrivateSession.price}</span>
-                </div>
-              </div>
-            </div>
-
-            <Button
-              onClick={handleStripeCheckout}
-              disabled={isBooking || !user}
-              className="w-full bg-gradient-electric hover:animate-electric-pulse"
-              size="lg"
-            >
-              {isBooking ? (
-                "Processing..."
-              ) : user ? (
-                <>
-                  <CreditCard className="h-4 w-4 mr-2" />
-                  Pay ${selectedPrivateSession.price} & Book Session
-                </>
-              ) : (
-                "Sign In to Book"
-              )}
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-    </div>
-  )
-}
-
-// Payment Success Component
-function PaymentSuccessCard({
-  sessionBooking,
-  selectedSession,
-  getSessionIcon,
-}: {
-  sessionBooking: any
-  selectedSession: PrivateSession | null
-  getSessionIcon: any
-}) {
-  const { toast } = useToast()
-
-  const handleSignalContact = () => {
-    const signalNumber = "+1234567890" // Replace with actual Signal number
-    toast({
-      title: "Signal Contact Info",
-      description: `Open Signal and message/call: ${signalNumber}`,
-    })
-  }
-
-  const handleWhatsAppCall = () => {
-    const whatsappNumber = "1234567890" // Replace with actual WhatsApp number
-    const message = encodeURIComponent(
-      `Hi Kelvin! I've just booked a ${selectedSession?.type} session for ${sessionBooking.scheduled_date} at ${sessionBooking.scheduled_time}. Looking forward to our call!`,
-    )
-    const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${message}`
-    window.open(whatsappUrl, "_blank")
-  }
-
-  const handleVideoCall = () => {
-    // This would redirect to the Daily.co room or video call platform
-    const videoUrl = sessionBooking.video_call_url || "/meet-and-greet?tab=live"
-    window.open(videoUrl, "_blank")
-  }
-
-  const getCallButton = () => {
-    switch (selectedSession?.type) {
-      case "signal":
-        return (
-          <Button onClick={handleSignalContact} className="w-full bg-blue-500 hover:bg-blue-600">
-            <Shield className="h-4 w-4 mr-2" />
-            Contact via Signal
-            <ExternalLink className="h-4 w-4 ml-2" />
-          </Button>
-        )
-      case "whatsapp":
-        return (
-          <Button onClick={handleWhatsAppCall} className="w-full bg-green-500 hover:bg-green-600">
-            <MessageCircle className="h-4 w-4 mr-2" />
-            Start WhatsApp Video Call
-            <ExternalLink className="h-4 w-4 ml-2" />
-          </Button>
-        )
-      case "video":
-        return (
-          <Button onClick={handleVideoCall} className="w-full bg-purple-500 hover:bg-purple-600">
-            <Video className="h-4 w-4 mr-2" />
-            Join Video Call
-            <ExternalLink className="h-4 w-4 ml-2" />
-          </Button>
-        )
-      default:
-        return null
-    }
-  }
+  const isFormValid = selectedDate && selectedTime && selectedMethod
 
   return (
     <div className="space-y-6">
-      {/* Success Confirmation */}
-      <Card className="border-green-500/30 bg-green-500/10">
+      {/* Header */}
+      <Card className="border-fire-500/20 dark:border-ice-500/20">
         <CardHeader className="text-center">
-          <div className="mx-auto w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mb-4">
-            <CheckCircle className="h-8 w-8 text-green-500" />
+          <CardTitle className="text-fire-600 dark:text-ice-400">Book Private Session</CardTitle>
+          <CardDescription>Get a personal 15-minute video call with Kelvin Creekman</CardDescription>
+          <div className="flex items-center justify-center gap-4 mt-4">
+            <Badge variant="secondary" className="bg-fire-500/10 dark:bg-ice-500/10">
+              <Clock className="h-3 w-3 mr-1" />
+              15 minutes
+            </Badge>
+            <Badge variant="secondary" className="bg-fire-500/10 dark:bg-ice-500/10">
+              <Users className="h-3 w-3 mr-1" />
+              1-on-1
+            </Badge>
+            <Badge variant="secondary" className="bg-fire-500/10 dark:bg-ice-500/10">
+              $50.00
+            </Badge>
           </div>
-          <CardTitle className="text-green-400">Payment Successful!</CardTitle>
-          <CardDescription>Your private session has been confirmed and paid for.</CardDescription>
         </CardHeader>
-        <CardContent className="text-center">
-          <div className="grid grid-cols-2 gap-4 mb-6">
-            <div className="p-3 rounded-lg bg-background/50">
-              <div className="font-semibold">Session Type</div>
-              <div className="text-sm text-muted-foreground capitalize">{selectedSession?.type}</div>
-            </div>
-            <div className="p-3 rounded-lg bg-background/50">
-              <div className="font-semibold">Duration</div>
-              <div className="text-sm text-muted-foreground">{selectedSession?.duration} minutes</div>
-            </div>
-            <div className="p-3 rounded-lg bg-background/50">
-              <div className="font-semibold">Date</div>
-              <div className="text-sm text-muted-foreground">{sessionBooking.scheduled_date}</div>
-            </div>
-            <div className="p-3 rounded-lg bg-background/50">
-              <div className="font-semibold">Time</div>
-              <div className="text-sm text-muted-foreground">{sessionBooking.scheduled_time}</div>
-            </div>
-          </div>
-        </CardContent>
       </Card>
 
-      {/* Call Rules */}
-      <Card className="border-electric-700/30">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Shield className="h-5 w-5 text-blue-500" />
-            Call Rules & Guidelines
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            <div className="flex items-start gap-3">
-              <Clock className="h-5 w-5 text-electric-400 mt-0.5" />
-              <div>
-                <div className="font-medium">Respect Time Limits</div>
-                <div className="text-sm text-muted-foreground">
-                  Your session is {selectedSession?.duration} minutes. Please be mindful of time.
+      <div className="grid gap-6 md:grid-cols-2">
+        {/* Date Selection */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <CalendarDays className="h-5 w-5" />
+              Select Date
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Calendar
+              mode="single"
+              selected={selectedDate}
+              onSelect={setSelectedDate}
+              disabled={(date) => date < new Date() || date.getDay() === 0} // Disable past dates and Sundays
+              className="rounded-md border"
+            />
+          </CardContent>
+        </Card>
+
+        {/* Time & Method Selection */}
+        <div className="space-y-6">
+          {/* Time Selection */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Clock className="h-5 w-5" />
+                Select Time
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Select value={selectedTime} onValueChange={setSelectedTime}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose time slot" />
+                </SelectTrigger>
+                <SelectContent>
+                  {timeSlots.map((time) => (
+                    <SelectItem key={time} value={time}>
+                      {time}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </CardContent>
+          </Card>
+
+          {/* Call Method Selection */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Video className="h-5 w-5" />
+                Call Method
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {callMethods.map((method) => {
+                const Icon = method.icon
+                return (
+                  <div
+                    key={method.id}
+                    className={`p-3 rounded-lg border cursor-pointer transition-all ${
+                      selectedMethod === method.id
+                        ? "border-fire-500 dark:border-ice-500 bg-fire-50 dark:bg-ice-950/20"
+                        : "border-border hover:border-fire-300 dark:hover:border-ice-300"
+                    }`}
+                    onClick={() => setSelectedMethod(method.id)}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Icon className={`h-5 w-5 ${method.color}`} />
+                      <div>
+                        <div className="font-medium">{method.name}</div>
+                        <div className="text-sm text-muted-foreground">{method.description}</div>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* Booking Summary & Action */}
+      {isFormValid && (
+        <Card className="border-fire-500/20 dark:border-ice-500/20">
+          <CardContent className="pt-6">
+            <div className="space-y-4">
+              <h3 className="font-semibold">Booking Summary</h3>
+              <div className="grid gap-2 text-sm">
+                <div className="flex justify-between">
+                  <span>Date:</span>
+                  <span>{selectedDate && format(selectedDate, "PPP")}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Time:</span>
+                  <span>{selectedTime} (15 minutes)</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Method:</span>
+                  <span>{callMethods.find((m) => m.id === selectedMethod)?.name}</span>
+                </div>
+                <Separator />
+                <div className="flex justify-between font-semibold">
+                  <span>Total:</span>
+                  <span>$50.00</span>
                 </div>
               </div>
+              <Button
+                onClick={handleBookSession}
+                disabled={isLoading}
+                className="w-full bg-gradient-fire dark:bg-gradient-ice hover:opacity-90"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  "Book Session - $50.00"
+                )}
+              </Button>
             </div>
-            <div className="flex items-start gap-3">
-              <Video className="h-5 w-5 text-electric-400 mt-0.5" />
-              <div>
-                <div className="font-medium">Video Only</div>
-                <div className="text-sm text-muted-foreground">Please keep your video on during the call.</div>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <CheckCircle className="h-5 w-5 text-electric-400 mt-0.5" />
-              <div>
-                <div className="font-medium">Be Punctual</div>
-                <div className="text-sm text-muted-foreground">Be ready 5 minutes before your scheduled time.</div>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <Shield className="h-5 w-5 text-electric-400 mt-0.5" />
-              <div>
-                <div className="font-medium">Respectful Interaction</div>
-                <div className="text-sm text-muted-foreground">Keep the conversation respectful and appropriate.</div>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Call Button */}
-      <Card className="border-electric-700/30">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-electric-400">
-            {selectedSession && getSessionIcon(selectedSession.type)}
-            Ready for Your Call?
-          </CardTitle>
-          <CardDescription>Click the button below when it's time for your scheduled session</CardDescription>
-        </CardHeader>
-        <CardContent>{getCallButton()}</CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }

@@ -29,16 +29,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // Get initial session
     const getInitialSession = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-      setUser(session?.user ?? null)
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession()
+        setUser(session?.user ?? null)
 
-      if (session?.user) {
-        await fetchProfile(session.user.id)
+        if (session?.user) {
+          await fetchProfile(session.user.id)
+        }
+      } catch (error) {
+        console.error("Error getting initial session:", error)
+      } finally {
+        setLoading(false)
       }
-
-      setLoading(false)
     }
 
     getInitialSession()
@@ -65,7 +69,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const { data, error } = await supabase.from("profiles").select("*").eq("id", userId).single()
 
-      if (error) throw error
+      if (error) {
+        console.error("Error fetching profile:", error)
+        return
+      }
       setProfile(data)
     } catch (error) {
       console.error("Error fetching profile:", error)
@@ -122,7 +129,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           })
           .eq("id", data.user.id)
 
-        if (profileError) throw profileError
+        if (profileError) {
+          console.error("Profile update error:", profileError)
+        }
       }
 
       toast({
