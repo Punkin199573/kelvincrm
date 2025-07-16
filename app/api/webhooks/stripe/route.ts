@@ -1,56 +1,58 @@
 import { type NextRequest, NextResponse } from "next/server"
 import Stripe from "stripe"
 import { createClient } from "@supabase/supabase-js"
+import { headers } from "next/headers"
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2024-06-20",
 })
 
-const supabaseAdmin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
-
-const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!
+const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET!
 
 export async function POST(request: NextRequest) {
   const body = await request.text()
-  const signature = request.headers.get("stripe-signature")!
+  const headersList = await headers()
+  const signature = headersList.get("stripe-signature")!
 
   let event: Stripe.Event
 
   try {
-    event = stripe.webhooks.constructEvent(body, signature, webhookSecret)
-  } catch (err) {
-    console.error("Webhook signature verification failed:", err)
+    event = stripe.webhooks.constructEvent(body, signature, endpointSecret)
+  } catch (err: any) {
+    console.error("Webhook signature verification failed:", err.message)
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 })
   }
+
+  const supabaseAdmin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 
   try {
     switch (event.type) {
       case "checkout.session.completed":
-        await handleCheckoutCompleted(event.data.object as Stripe.Checkout.Session)
+        await handleCheckoutCompleted(event.data.object as Stripe.Checkout.Session, supabaseAdmin)
         break
 
       case "payment_intent.succeeded":
-        await handlePaymentSucceeded(event.data.object as Stripe.PaymentIntent)
+        await handlePaymentSucceeded(event.data.object as Stripe.PaymentIntent, supabaseAdmin)
         break
 
       case "invoice.payment_succeeded":
-        await handleInvoicePaymentSucceeded(event.data.object as Stripe.Invoice)
+        await handleInvoicePaymentSucceeded(event.data.object as Stripe.Invoice, supabaseAdmin)
         break
 
       case "customer.subscription.created":
-        await handleSubscriptionCreated(event.data.object as Stripe.Subscription)
+        await handleSubscriptionCreated(event.data.object as Stripe.Subscription, supabaseAdmin)
         break
 
       case "customer.subscription.updated":
-        await handleSubscriptionUpdated(event.data.object as Stripe.Subscription)
+        await handleSubscriptionUpdated(event.data.object as Stripe.Subscription, supabaseAdmin)
         break
 
       case "customer.subscription.deleted":
-        await handleSubscriptionDeleted(event.data.object as Stripe.Subscription)
+        await handleSubscriptionDeleted(event.data.object as Stripe.Subscription, supabaseAdmin)
         break
 
       case "invoice.payment_failed":
-        await handlePaymentFailed(event.data.object as Stripe.Invoice)
+        await handleInvoicePaymentFailed(event.data.object as Stripe.Invoice, supabaseAdmin)
         break
 
       default:
@@ -64,7 +66,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
+async function handleCheckoutCompleted(session: Stripe.Checkout.Session, supabase: any) {
   const { metadata } = session
 
   if (!metadata) {
@@ -76,19 +78,19 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
   switch (metadata.type) {
     case "subscription":
-      await handleSubscriptionCheckout(session)
+      await handleSubscriptionPayment(session, supabase)
       break
 
     case "store_purchase":
-      await handleStoreCheckout(session)
+      await handleStoreOrder(session, supabase)
       break
 
     case "session_booking":
-      await handleSessionBookingCheckout(session)
+      await handleSessionBooking(session, supabase)
       break
 
     case "event_registration":
-      await handleEventRegistrationCheckout(session)
+      await handleEventRegistration(session, supabase)
       break
 
     default:
@@ -96,165 +98,180 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   }
 }
 
-async function handleSubscriptionCheckout(session: Stripe.Checkout.Session) {
-  const { customer, subscription, metadata } = session
+async function handleSubscriptionPayment(session: Stripe.Checkout.Session, supabase: any) {
+  const userId = session.metadata?.userId
+  const tier = session.metadata?.tier
 
-  if (!customer || !subscription || !metadata?.user_id || !metadata?.tier) {
-    console.error("Missing required data for subscription checkout")
+  if (!userId || !tier) {
+    console.error("Missing userId or tier in subscription metadata")
     return
   }
 
-  try {
-    // Update user profile with new tier and Stripe customer ID
-    const { error: profileError } = await supabaseAdmin
-      .from("profiles")
-      .update({
-        tier: metadata.tier as "frost_fan" | "blizzard_vip" | "avalanche_backstage",
-        stripe_customer_id: customer as string,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", metadata.user_id)
-
-    if (profileError) {
-      console.error("Error updating user profile:", profileError)
-      return
-    }
-
-    // Create subscription record
-    const subscriptionData = await stripe.subscriptions.retrieve(subscription as string)
-
-    const { error: subError } = await supabaseAdmin.from("user_subscriptions").upsert({
-      user_id: metadata.user_id,
-      stripe_subscription_id: subscription as string,
-      stripe_customer_id: customer as string,
-      tier: metadata.tier,
-      status: subscriptionData.status,
-      current_period_start: new Date(subscriptionData.current_period_start * 1000).toISOString(),
-      current_period_end: new Date(subscriptionData.current_period_end * 1000).toISOString(),
-      created_at: new Date().toISOString(),
+  // Update user tier
+  const { error: updateError } = await supabase
+    .from("profiles")
+    .update({
+      tier,
+      subscription_status: "active",
+      stripe_customer_id: session.customer,
       updated_at: new Date().toISOString(),
     })
+    .eq("id", userId)
 
-    if (subError) {
-      console.error("Error creating subscription record:", subError)
-    } else {
-      console.log(`User ${metadata.user_id} upgraded to ${metadata.tier}`)
-
-      // Send welcome email
-      await sendWelcomeEmail(metadata.user_id, metadata.tier)
-    }
-  } catch (error) {
-    console.error("Error handling subscription checkout:", error)
-  }
-}
-
-async function handleStoreCheckout(session: Stripe.Checkout.Session) {
-  const { metadata } = session
-
-  if (!metadata?.order_id) {
-    console.error("Missing order_id in store checkout")
+  if (updateError) {
+    console.error("Error updating user tier:", updateError)
     return
   }
 
-  try {
-    // Update order status to processing
-    const { error } = await supabaseAdmin
-      .from("orders")
-      .update({
-        status: "processing",
-        stripe_payment_intent_id: session.payment_intent as string,
-        stripe_session_id: session.id,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", metadata.order_id)
+  // Send welcome email
+  await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/send-welcome-email`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ userId, tier, email: session.customer_details?.email }),
+  })
 
-    if (error) {
-      console.error("Error updating order:", error)
-    } else {
-      console.log(`Order ${metadata.order_id} marked as processing`)
-
-      // Send order confirmation email
-      await sendOrderConfirmationEmail(metadata.order_id)
-    }
-  } catch (error) {
-    console.error("Error handling store checkout:", error)
-  }
+  console.log(`User ${userId} upgraded to ${tier}`)
 }
 
-async function handleSessionBookingCheckout(session: Stripe.Checkout.Session) {
-  const { metadata } = session
+async function handleStoreOrder(session: Stripe.Checkout.Session, supabase: any) {
+  const userId = session.metadata?.userId
+  const cartItems = JSON.parse(session.metadata?.cartItems || "[]")
 
-  if (!metadata?.booking_id) {
-    console.error("Missing booking_id in session checkout")
+  if (!userId || !cartItems.length) {
+    console.error("Missing userId or cartItems in store metadata")
     return
   }
 
-  try {
-    // Update session booking status to confirmed
-    const { error } = await supabaseAdmin
-      .from("session_bookings")
-      .update({
-        status: "confirmed",
-        stripe_payment_intent_id: session.payment_intent as string,
-        stripe_session_id: session.id,
-        amount_paid: (session.amount_total || 0) / 100,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", metadata.booking_id)
+  // Create order record
+  const { data: order, error: orderError } = await supabase
+    .from("orders")
+    .insert({
+      user_id: userId,
+      stripe_session_id: session.id,
+      total_amount: session.amount_total! / 100,
+      status: "completed",
+      items: cartItems,
+    })
+    .select()
+    .single()
 
-    if (error) {
-      console.error("Error updating session booking:", error)
-    } else {
-      console.log(`Session booking ${metadata.booking_id} confirmed`)
-
-      // Send booking confirmation email
-      await sendSessionConfirmationEmail(metadata.booking_id)
-    }
-  } catch (error) {
-    console.error("Error handling session booking checkout:", error)
-  }
-}
-
-async function handleEventRegistrationCheckout(session: Stripe.Checkout.Session) {
-  const { metadata } = session
-
-  if (!metadata?.registration_id) {
-    console.error("Missing registration_id in event checkout")
+  if (orderError) {
+    console.error("Error creating order:", orderError)
     return
   }
 
-  try {
-    // Update event registration status
-    const { error } = await supabaseAdmin
-      .from("event_registrations")
-      .update({
-        registration_status: "confirmed",
-        stripe_payment_intent_id: session.payment_intent as string,
-        stripe_session_id: session.id,
-        amount_paid: (session.amount_total || 0) / 100,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", metadata.registration_id)
+  // Send order confirmation email
+  await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/send-order-confirmation`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      userId,
+      orderId: order.id,
+      email: session.customer_details?.email,
+      items: cartItems,
+      total: session.amount_total! / 100,
+    }),
+  })
 
-    if (error) {
-      console.error("Error updating event registration:", error)
-    } else {
-      console.log(`Event registration ${metadata.registration_id} confirmed`)
-
-      // Send event confirmation email
-      await sendEventConfirmationEmail(metadata.registration_id)
-    }
-  } catch (error) {
-    console.error("Error handling event registration checkout:", error)
-  }
+  console.log(`Order ${order.id} completed for user ${userId}`)
 }
 
-async function handlePaymentSucceeded(paymentIntent: Stripe.PaymentIntent) {
+async function handleSessionBooking(session: Stripe.Checkout.Session, supabase: any) {
+  const userId = session.metadata?.userId
+  const sessionDate = session.metadata?.sessionDate
+  const sessionTime = session.metadata?.sessionTime
+  const platform = session.metadata?.platform
+
+  if (!userId || !sessionDate || !sessionTime) {
+    console.error("Missing session booking metadata")
+    return
+  }
+
+  // Create session booking
+  const { data: booking, error: bookingError } = await supabase
+    .from("session_bookings")
+    .insert({
+      user_id: userId,
+      session_date: sessionDate,
+      session_time: sessionTime,
+      platform: platform || "zoom",
+      status: "confirmed",
+      stripe_session_id: session.id,
+      amount_paid: session.amount_total! / 100,
+    })
+    .select()
+    .single()
+
+  if (bookingError) {
+    console.error("Error creating session booking:", bookingError)
+    return
+  }
+
+  // Send booking confirmation email
+  await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/send-meetgreet-confirmation`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      userId,
+      bookingId: booking.id,
+      email: session.customer_details?.email,
+      sessionDate,
+      sessionTime,
+      platform,
+    }),
+  })
+
+  console.log(`Session booking ${booking.id} confirmed for user ${userId}`)
+}
+
+async function handleEventRegistration(session: Stripe.Checkout.Session, supabase: any) {
+  const userId = session.metadata?.userId
+  const eventId = session.metadata?.eventId
+
+  if (!userId || !eventId) {
+    console.error("Missing userId or eventId in event metadata")
+    return
+  }
+
+  // Create event registration
+  const { data: registration, error: registrationError } = await supabase
+    .from("event_registrations")
+    .insert({
+      user_id: userId,
+      event_id: eventId,
+      status: "confirmed",
+      stripe_session_id: session.id,
+      amount_paid: session.amount_total! / 100,
+    })
+    .select()
+    .single()
+
+  if (registrationError) {
+    console.error("Error creating event registration:", registrationError)
+    return
+  }
+
+  // Send event confirmation email
+  await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/send-event-confirmation`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      userId,
+      eventId,
+      registrationId: registration.id,
+      email: session.customer_details?.email,
+    }),
+  })
+
+  console.log(`Event registration ${registration.id} confirmed for user ${userId}`)
+}
+
+async function handlePaymentSucceeded(paymentIntent: Stripe.PaymentIntent, supabase: any) {
   console.log(`Payment succeeded: ${paymentIntent.id}`)
 
   // Log payment success for tracking
   try {
-    await supabaseAdmin.from("payment_logs").insert({
+    await supabase.from("payment_logs").insert({
       stripe_payment_intent_id: paymentIntent.id,
       amount: paymentIntent.amount / 100,
       currency: paymentIntent.currency,
@@ -266,12 +283,38 @@ async function handlePaymentSucceeded(paymentIntent: Stripe.PaymentIntent) {
   }
 }
 
-async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
+async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice, supabase: any) {
+  console.log(`Invoice payment succeeded: ${invoice.id}`)
+
+  try {
+    // Find user by customer ID
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("stripe_customer_id", invoice.customer as string)
+      .single()
+
+    if (profile) {
+      // Log payment success for tracking
+      await supabase.from("payment_logs").insert({
+        stripe_payment_intent_id: invoice.payment_intent as string,
+        amount: invoice.amount_paid / 100,
+        currency: invoice.currency,
+        status: "succeeded",
+        created_at: new Date().toISOString(),
+      })
+    }
+  } catch (error) {
+    console.error("Error handling invoice payment succeeded:", error)
+  }
+}
+
+async function handleSubscriptionCreated(subscription: Stripe.Subscription, supabase: any) {
   console.log(`Subscription created: ${subscription.id}`)
 
   try {
     // Find user by customer ID
-    const { data: profile } = await supabaseAdmin
+    const { data: profile } = await supabase
       .from("profiles")
       .select("*")
       .eq("stripe_customer_id", subscription.customer as string)
@@ -279,7 +322,7 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
 
     if (profile) {
       // Update subscription record
-      await supabaseAdmin.from("user_subscriptions").upsert({
+      await supabase.from("user_subscriptions").upsert({
         user_id: profile.id,
         stripe_subscription_id: subscription.id,
         stripe_customer_id: subscription.customer as string,
@@ -294,12 +337,12 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
   }
 }
 
-async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
+async function handleSubscriptionUpdated(subscription: Stripe.Subscription, supabase: any) {
   console.log(`Subscription updated: ${subscription.id}`)
 
   try {
     // Update subscription record
-    const { error } = await supabaseAdmin
+    const { error } = await supabase
       .from("user_subscriptions")
       .update({
         status: subscription.status,
@@ -317,12 +360,12 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
   }
 }
 
-async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
+async function handleSubscriptionDeleted(subscription: Stripe.Subscription, supabase: any) {
   console.log(`Subscription deleted: ${subscription.id}`)
 
   try {
     // Find user by subscription ID
-    const { data: userSub } = await supabaseAdmin
+    const { data: userSub } = await supabase
       .from("user_subscriptions")
       .select("user_id")
       .eq("stripe_subscription_id", subscription.id)
@@ -330,7 +373,7 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
 
     if (userSub) {
       // Update subscription status to cancelled
-      await supabaseAdmin
+      await supabase
         .from("user_subscriptions")
         .update({
           status: "cancelled",
@@ -338,125 +381,55 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
         })
         .eq("stripe_subscription_id", subscription.id)
 
-      // Downgrade user to basic tier
-      await supabaseAdmin
+      // Downgrade user to free tier
+      await supabase
         .from("profiles")
         .update({
-          tier: "frost_fan",
+          tier: "free",
+          subscription_status: "canceled",
           updated_at: new Date().toISOString(),
         })
         .eq("id", userSub.user_id)
 
-      console.log(`User ${userSub.user_id} downgraded to frost_fan`)
+      console.log(`User ${userSub.user_id} downgraded to free`)
     }
   } catch (error) {
     console.error("Error handling subscription deleted:", error)
   }
 }
 
-async function handlePaymentFailed(invoice: Stripe.Invoice) {
+async function handleInvoicePaymentFailed(invoice: Stripe.Invoice, supabase: any) {
   console.log(`Payment failed for invoice: ${invoice.id}`)
 
   try {
     // Find user by customer ID
-    const { data: profile } = await supabaseAdmin
+    const { data: profile } = await supabase
       .from("profiles")
-      .select("*")
+      .select("id, email")
       .eq("stripe_customer_id", invoice.customer as string)
       .single()
 
-    if (profile) {
-      // Send payment failed notification
-      await sendPaymentFailedEmail(profile.id, invoice.id)
+    if (!profile) {
+      console.error("User not found for customer:", invoice.customer)
+      return
     }
+
+    // Update subscription status
+    const { error } = await supabase
+      .from("profiles")
+      .update({
+        subscription_status: "past_due",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", profile.id)
+
+    if (error) {
+      console.error("Error updating payment failure status:", error)
+    }
+
+    // TODO: Send payment failure notification email
+    console.log(`Payment failed for user ${profile.id}`)
   } catch (error) {
     console.error("Error handling payment failed:", error)
-  }
-}
-
-async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
-  console.log(`Invoice payment succeeded: ${invoice.id}`)
-
-  try {
-    // Find user by customer ID
-    const { data: profile } = await supabaseAdmin
-      .from("profiles")
-      .select("*")
-      .eq("stripe_customer_id", invoice.customer as string)
-      .single()
-
-    if (profile) {
-      // Log payment success for tracking
-      await supabaseAdmin.from("payment_logs").insert({
-        stripe_payment_intent_id: invoice.payment_intent as string,
-        amount: invoice.amount_paid / 100,
-        currency: invoice.currency,
-        status: "succeeded",
-        created_at: new Date().toISOString(),
-      })
-    }
-  } catch (error) {
-    console.error("Error handling invoice payment succeeded:", error)
-  }
-}
-
-// Email notification functions
-async function sendWelcomeEmail(userId: string, tier: string) {
-  try {
-    await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/send-welcome-email`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId, tier }),
-    })
-  } catch (error) {
-    console.error("Error sending welcome email:", error)
-  }
-}
-
-async function sendOrderConfirmationEmail(orderId: string) {
-  try {
-    await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/send-order-confirmation`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ orderId }),
-    })
-  } catch (error) {
-    console.error("Error sending order confirmation email:", error)
-  }
-}
-
-async function sendSessionConfirmationEmail(bookingId: string) {
-  try {
-    await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/send-session-confirmation`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ bookingId }),
-    })
-  } catch (error) {
-    console.error("Error sending session confirmation email:", error)
-  }
-}
-
-async function sendEventConfirmationEmail(registrationId: string) {
-  try {
-    await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/send-event-confirmation`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ registrationId }),
-    })
-  } catch (error) {
-    console.error("Error sending event confirmation email:", error)
-  }
-}
-
-async function sendPaymentFailedEmail(userId: string, invoiceId: string) {
-  try {
-    await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/send-payment-failed`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId, invoiceId }),
-    })
-  } catch (error) {
-    console.error("Error sending payment failed email:", error)
   }
 }

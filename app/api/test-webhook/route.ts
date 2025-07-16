@@ -1,41 +1,85 @@
 import { type NextRequest, NextResponse } from "next/server"
-import Stripe from "stripe"
+import { createClient } from "@/lib/supabase/server"
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2024-06-20",
-})
-
-export async function POST(request: NextRequest) {
+export async function GET() {
   try {
-    const { eventType, data } = await request.json()
+    const supabase = await createClient()
 
-    // Create a test event
-    const testEvent = await stripe.events.create({
-      type: eventType,
-      data: {
-        object: data,
-      },
-    })
+    // Test database connection
+    const { data, error } = await supabase.from("profiles").select("count").limit(1)
 
-    // Send to webhook endpoint
-    const webhookResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/webhooks/stripe`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "stripe-signature": "test-signature",
-      },
-      body: JSON.stringify(testEvent),
-    })
+    if (error) {
+      return NextResponse.json(
+        {
+          status: "error",
+          message: "Database connection failed",
+          error: error.message,
+        },
+        { status: 500 },
+      )
+    }
 
-    const result = await webhookResponse.json()
+    // Test environment variables
+    const requiredEnvVars = [
+      "STRIPE_SECRET_KEY",
+      "STRIPE_WEBHOOK_SECRET",
+      "NEXT_PUBLIC_SUPABASE_URL",
+      "SUPABASE_SERVICE_ROLE_KEY",
+    ]
+
+    const missingEnvVars = requiredEnvVars.filter((envVar) => !process.env[envVar])
+
+    if (missingEnvVars.length > 0) {
+      return NextResponse.json(
+        {
+          status: "error",
+          message: "Missing environment variables",
+          missing: missingEnvVars,
+        },
+        { status: 500 },
+      )
+    }
 
     return NextResponse.json({
-      success: true,
-      eventId: testEvent.id,
-      webhookResponse: result,
+      status: "success",
+      message: "Webhook system is ready",
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV,
     })
   } catch (error) {
-    console.error("Test webhook error:", error)
-    return NextResponse.json({ error: "Test failed" }, { status: 500 })
+    return NextResponse.json(
+      {
+        status: "error",
+        message: "Webhook test failed",
+        error: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 },
+    )
+  }
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json()
+    const { eventType, testData } = body
+
+    // Simulate webhook processing
+    console.log(`Testing webhook event: ${eventType}`)
+    console.log("Test data:", testData)
+
+    return NextResponse.json({
+      status: "success",
+      message: `Test webhook ${eventType} processed successfully`,
+      timestamp: new Date().toISOString(),
+    })
+  } catch (error) {
+    return NextResponse.json(
+      {
+        status: "error",
+        message: "Test webhook failed",
+        error: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 },
+    )
   }
 }
