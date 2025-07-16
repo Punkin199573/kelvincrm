@@ -1,11 +1,11 @@
 "use client"
 
 import type React from "react"
-
 import { createContext, useContext, useEffect, useState } from "react"
 import type { User, Session } from "@supabase/supabase-js"
 import { supabase, type Profile } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
+import { toast } from "sonner"
 
 interface AuthContextType {
   user: User | null
@@ -93,6 +93,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         email,
         password,
       })
+
+      if (!error) {
+        toast.success("Welcome back! 🎸")
+      }
+
       return { error }
     } catch (error) {
       return { error }
@@ -110,6 +115,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           },
         },
       })
+
+      if (!error) {
+        toast.success("Account created! Check your email to verify your account.")
+      }
+
       return { error }
     } catch (error) {
       return { error }
@@ -121,6 +131,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null)
     setProfile(null)
     setSession(null)
+    toast.success("Signed out successfully")
     router.push("/")
   }
 
@@ -132,6 +143,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (!error) {
         setProfile((prev) => (prev ? { ...prev, ...updates } : null))
+        toast.success("Profile updated successfully")
       }
 
       return { error }

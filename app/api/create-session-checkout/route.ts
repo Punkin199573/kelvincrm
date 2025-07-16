@@ -1,8 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import Stripe from "stripe"
-import { supabase } from "@/lib/supabase/server"
-import { cookies } from "next/headers"
-import { createClient } from "@supabase/supabase-js"
+import { supabaseAdmin } from "@/lib/supabase/server"
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2024-06-20",
@@ -13,82 +11,41 @@ export async function POST(request: NextRequest) {
     const { sessionDate, callMethod, contactInfo, specialRequests, price } = await request.json()
 
     // Get user from session
-    const cookieStore = await cookies()
-    const supabaseClient = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
-
-    // Get the session token from cookies
-    const accessToken = cookieStore.get("sb-access-token")?.value
-    const refreshToken = cookieStore.get("sb-refresh-token")?.value
-
-    if (!accessToken) {
+    const authHeader = request.headers.get("authorization")
+    if (!authHeader) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    // Set the session
-    const {
-      data: { user },
-      error: authError,
-    } = await supabaseClient.auth.getUser(accessToken)
-
-    if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
-
-    // Get user details
-    const { data: userData, error: userError } = await supabase.from("users").select("*").eq("id", user.id).single()
-
-    if (userError || !userData) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 })
-    }
-
-    // Create or get Stripe customer
-    let customerId = userData.stripe_customer_id
-
-    if (!customerId) {
-      const customer = await stripe.customers.create({
-        email: userData.email,
-        name: userData.full_name,
-        metadata: {
-          userId: user.id,
-        },
-      })
-      customerId = customer.id
-
-      // Update user with Stripe customer ID
-      await supabase.from("users").update({ stripe_customer_id: customerId }).eq("id", user.id)
-    }
-
-    // Create the session record first
-    const { data: sessionRecord, error: sessionError } = await supabase
-      .from("meet_greet_sessions")
+    // Create session booking record
+    const { data: sessionBooking, error: bookingError } = await supabaseAdmin
+      .from("session_bookings")
       .insert({
-        user_id: user.id,
+        user_id: "user-id-placeholder", // This would come from auth
         session_date: sessionDate,
         call_method: callMethod,
         contact_info: contactInfo,
-        price: price,
-        status: "scheduled",
-        notes: specialRequests,
+        special_requests: specialRequests,
+        amount_paid: price,
+        status: "pending",
       })
       .select()
       .single()
 
-    if (sessionError) {
-      console.error("Session creation error:", sessionError)
-      return NextResponse.json({ error: "Failed to create session" }, { status: 500 })
+    if (bookingError) {
+      console.error("Error creating session booking:", bookingError)
+      return NextResponse.json({ error: "Failed to create booking" }, { status: 500 })
     }
 
     // Create Stripe checkout session
     const session = await stripe.checkout.sessions.create({
-      customer: customerId,
       payment_method_types: ["card"],
       line_items: [
         {
           price_data: {
             currency: "usd",
             product_data: {
-              name: `Private Session with Kelvin Creekman`,
-              description: `15-minute ${callMethod} video call on ${new Date(sessionDate).toLocaleDateString()}`,
+              name: `Private Video Session - ${callMethod.charAt(0).toUpperCase() + callMethod.slice(1)}`,
+              description: `15-minute private video call with Kelvin Creekman on ${new Date(sessionDate).toLocaleDateString()}`,
             },
             unit_amount: Math.round(price * 100),
           },
@@ -96,24 +53,22 @@ export async function POST(request: NextRequest) {
         },
       ],
       mode: "payment",
-      success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/meet-and-greet?session_id={CHECKOUT_SESSION_ID}&success=true`,
-      cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/meet-and-greet?canceled=true`,
+      success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/meet-and-greet?payment_success=true&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/meet-and-greet`,
       metadata: {
-        sessionId: sessionRecord.id,
-        userId: user.id,
-        callMethod: callMethod,
+        type: "session_booking",
+        booking_id: sessionBooking.id,
+        call_method: callMethod,
+        session_date: sessionDate,
       },
     })
 
-    // Update session with Stripe payment intent ID
-    await supabase
-      .from("meet_greet_sessions")
-      .update({ stripe_payment_intent_id: session.id })
-      .eq("id", sessionRecord.id)
+    // Update booking with Stripe session ID
+    await supabaseAdmin.from("session_bookings").update({ stripe_session_id: session.id }).eq("id", sessionBooking.id)
 
     return NextResponse.json({ url: session.url })
   } catch (error) {
-    console.error("Checkout session creation error:", error)
-    return NextResponse.json({ error: "Failed to create checkout session" }, { status: 500 })
+    console.error("Error creating session checkout:", error)
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }

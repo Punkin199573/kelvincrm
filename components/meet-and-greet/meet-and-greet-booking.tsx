@@ -10,7 +10,19 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Separator } from "@/components/ui/separator"
-import { CalendarDays, Clock, Phone, MessageSquare, Video, CheckCircle, ExternalLink } from "lucide-react"
+import {
+  CalendarDays,
+  Clock,
+  Phone,
+  MessageSquare,
+  Video,
+  CheckCircle,
+  ExternalLink,
+  Shield,
+  CreditCard,
+  Users,
+  Loader2,
+} from "lucide-react"
 import { format, addDays, setHours, setMinutes, isBefore, isAfter } from "date-fns"
 import { useAuth } from "@/components/auth/auth-provider"
 import { supabase } from "@/lib/supabase/client"
@@ -50,13 +62,180 @@ const timeSlots = [
 ]
 
 const callMethods = {
-  whatsapp: { name: "WhatsApp Video", price: 49.99, icon: Phone },
-  signal: { name: "Signal Video", price: 54.99, icon: MessageSquare },
-  daily: { name: "Daily.co Video", price: 59.99, icon: Video },
+  whatsapp: { name: "WhatsApp Video", price: 49.99, icon: Phone, color: "text-green-600" },
+  signal: { name: "Signal Video", price: 54.99, icon: MessageSquare, color: "text-blue-600" },
+  daily: { name: "Daily.co Video", price: 59.99, icon: Video, color: "text-purple-600" },
+}
+
+interface PaymentSuccessProps {
+  sessionData: {
+    callMethod: "whatsapp" | "signal" | "daily"
+    sessionDate: Date
+    timeSlot: string
+    amount: number
+    contactInfo: any
+  }
+  onClose: () => void
+}
+
+function PaymentSuccess({ sessionData, onClose }: PaymentSuccessProps) {
+  const { callMethod, sessionDate, timeSlot, amount, contactInfo } = sessionData
+
+  const handleProceedToCall = () => {
+    if (callMethod === "whatsapp") {
+      const phoneNumber = contactInfo?.phone?.replace(/\D/g, "") || "1234567890"
+      const message = encodeURIComponent(
+        `Hi Kelvin! I have a scheduled private session on ${format(sessionDate, "PPP")} at ${timeSlot}. Ready for our video call!`,
+      )
+      window.open(`https://wa.me/${phoneNumber}?text=${message}`, "_blank")
+    } else if (callMethod === "signal") {
+      alert(
+        `Please open Signal app and contact: +1 (234) 567-8900 or username: @kelvincrm for your scheduled session on ${format(sessionDate, "PPP")} at ${timeSlot}`,
+      )
+    } else if (callMethod === "daily") {
+      window.open("/meet-and-greet?tab=live", "_blank")
+    }
+  }
+
+  const getCallButtonText = () => {
+    switch (callMethod) {
+      case "whatsapp":
+        return "Open WhatsApp Video Call"
+      case "signal":
+        return "Get Signal Contact Info"
+      case "daily":
+        return "Join Video Room"
+      default:
+        return "Proceed to Call"
+    }
+  }
+
+  const getCallIcon = () => {
+    const method = callMethods[callMethod]
+    return method ? <method.icon className="h-4 w-4 mr-2" /> : null
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Success Confirmation */}
+      <Card className="border-green-500/20 bg-green-50/50 dark:bg-green-950/20">
+        <CardHeader className="text-center">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100 dark:bg-green-900">
+            <CheckCircle className="h-8 w-8 text-green-600 dark:text-green-400" />
+          </div>
+          <CardTitle className="text-green-800 dark:text-green-200">Payment Successful!</CardTitle>
+          <CardDescription className="text-green-600 dark:text-green-400">
+            Your private session with Kelvin has been booked and confirmed
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="rounded-lg bg-background/50 p-4 space-y-3">
+            <div className="flex items-center gap-2 text-sm">
+              <CalendarDays className="h-4 w-4 text-muted-foreground" />
+              <span className="font-medium">{format(sessionDate, "PPP")}</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm">
+              <Clock className="h-4 w-4 text-muted-foreground" />
+              <span className="font-medium">{timeSlot} (15 minutes)</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm">
+              <Video className="h-4 w-4 text-muted-foreground" />
+              <span className="font-medium">{callMethods[callMethod].name}</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm">
+              <CreditCard className="h-4 w-4 text-muted-foreground" />
+              <span className="font-medium">${amount.toFixed(2)} paid</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Call Rules & Guidelines */}
+      <Card className="border-fire-500/20 dark:border-ice-500/20">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-fire-600 dark:text-ice-400">
+            <Shield className="h-5 w-5" />
+            Video Call Guidelines
+          </CardTitle>
+          <CardDescription>Please read and follow these important guidelines for your session</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="grid gap-3">
+              <div className="flex items-start gap-3">
+                <Clock className="h-5 w-5 text-fire-500 dark:text-ice-400 mt-0.5 flex-shrink-0" />
+                <div>
+                  <div className="font-medium">Be Punctual</div>
+                  <div className="text-sm text-muted-foreground">
+                    Be ready 5 minutes before your scheduled time. Session starts exactly at {timeSlot}.
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <Video className="h-5 w-5 text-fire-500 dark:text-ice-400 mt-0.5 flex-shrink-0" />
+                <div>
+                  <div className="font-medium">Video Required</div>
+                  <div className="text-sm text-muted-foreground">
+                    Keep your video on throughout the call. Ensure good lighting and stable internet.
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <Users className="h-5 w-5 text-fire-500 dark:text-ice-400 mt-0.5 flex-shrink-0" />
+                <div>
+                  <div className="font-medium">Respect Time Limits</div>
+                  <div className="text-sm text-muted-foreground">
+                    Your session is strictly 15 minutes. Please be mindful of time to respect other fans.
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <Shield className="h-5 w-5 text-fire-500 dark:text-ice-400 mt-0.5 flex-shrink-0" />
+                <div>
+                  <div className="font-medium">Professional Conduct</div>
+                  <div className="text-sm text-muted-foreground">
+                    Keep the conversation respectful and appropriate. No recording or screenshots allowed.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Call Action */}
+      <Card className="border-fire-500/20 dark:border-ice-500/20">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-fire-600 dark:text-ice-400">
+            {getCallIcon()}
+            Ready for Your Call?
+          </CardTitle>
+          <CardDescription>Click the button below when it's time for your scheduled session</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Button
+            onClick={handleProceedToCall}
+            className="w-full bg-gradient-to-r from-fire-500 to-ice-500 hover:from-fire-600 hover:to-ice-600 text-white"
+            size="lg"
+          >
+            {getCallIcon()}
+            {getCallButtonText()}
+            <ExternalLink className="h-4 w-4 ml-2" />
+          </Button>
+
+          <Button variant="outline" onClick={onClose} className="w-full bg-transparent">
+            Close
+          </Button>
+        </CardContent>
+      </Card>
+    </div>
+  )
 }
 
 export function MeetAndGreetBooking() {
-  const { user } = useAuth()
   const [booking, setBooking] = useState<BookingData>({
     date: undefined,
     time: "",
@@ -66,14 +245,51 @@ export function MeetAndGreetBooking() {
   })
   const [bookedSlots, setBookedSlots] = useState<string[]>([])
   const [isLoading, setIsLoading] = useState(false)
-  const [paymentSuccess, setPaymentSuccess] = useState(false)
-  const [sessionDetails, setSessionDetails] = useState<any>(null)
+  const [showSuccess, setShowSuccess] = useState(false)
+  const [sessionData, setSessionData] = useState<any>(null)
+
+  const { user } = useAuth()
+
+  // Check for successful payment on component mount
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search)
+    const paymentSuccess = urlParams.get("payment_success") === "true"
+    const sessionId = urlParams.get("session_id")
+
+    if (paymentSuccess && sessionId) {
+      fetchSessionDetails(sessionId)
+    }
+  }, [])
 
   useEffect(() => {
     if (booking.date) {
       fetchBookedSlots(booking.date)
     }
   }, [booking.date])
+
+  const fetchSessionDetails = async (sessionId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("session_bookings")
+        .select("*")
+        .eq("stripe_session_id", sessionId)
+        .single()
+
+      if (error) throw error
+
+      setSessionData({
+        callMethod: data.call_method,
+        sessionDate: new Date(data.session_date),
+        timeSlot: format(new Date(data.session_date), "HH:mm"),
+        amount: data.amount_paid,
+        contactInfo: data.contact_info,
+      })
+      setShowSuccess(true)
+    } catch (error) {
+      console.error("Error fetching session details:", error)
+      toast.error("Could not load session details")
+    }
+  }
 
   const fetchBookedSlots = async (date: Date) => {
     try {
@@ -84,11 +300,11 @@ export function MeetAndGreetBooking() {
       endOfDay.setHours(23, 59, 59, 999)
 
       const { data, error } = await supabase
-        .from("meet_greet_sessions")
+        .from("session_bookings")
         .select("session_date")
         .gte("session_date", startOfDay.toISOString())
         .lte("session_date", endOfDay.toISOString())
-        .eq("status", "scheduled")
+        .eq("status", "confirmed")
 
       if (error) throw error
 
@@ -110,10 +326,7 @@ export function MeetAndGreetBooking() {
     const slotDateTime = setMinutes(setHours(booking.date, hours), minutes)
     const now = new Date()
 
-    // Check if slot is in the past
     if (isBefore(slotDateTime, now)) return false
-
-    // Check if slot is already booked
     if (bookedSlots.includes(time)) return false
 
     return true
@@ -121,7 +334,7 @@ export function MeetAndGreetBooking() {
 
   const isDateAvailable = (date: Date) => {
     const today = new Date()
-    const maxDate = addDays(today, 30) // Allow booking up to 30 days in advance
+    const maxDate = addDays(today, 30)
 
     return !isBefore(date, today) && !isAfter(date, maxDate)
   }
@@ -158,7 +371,6 @@ export function MeetAndGreetBooking() {
       const sessionDateTime = setMinutes(setHours(booking.date, hours), minutes)
       const price = callMethods[booking.callMethod].price
 
-      // Create checkout session
       const response = await fetch("/api/create-session-checkout", {
         method: "POST",
         headers: {
@@ -257,130 +469,16 @@ export function MeetAndGreetBooking() {
     }
   }
 
-  // Check for payment success
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search)
-    const sessionId = urlParams.get("session_id")
-
-    if (sessionId) {
-      // Fetch session details
-      fetchSessionDetails(sessionId)
-    }
-  }, [])
-
-  const fetchSessionDetails = async (sessionId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from("meet_greet_sessions")
-        .select("*")
-        .eq("stripe_payment_intent_id", sessionId)
-        .single()
-
-      if (error) throw error
-
-      setSessionDetails(data)
-      setPaymentSuccess(true)
-    } catch (error) {
-      console.error("Error fetching session details:", error)
-    }
-  }
-
-  const getCallButton = () => {
-    if (!sessionDetails) return null
-
-    const callMethod = sessionDetails.call_method
-    const contactInfo = sessionDetails.contact_info
-
-    switch (callMethod) {
-      case "whatsapp":
-        return (
-          <Button
-            onClick={() => window.open(`https://wa.me/${contactInfo.phone?.replace(/\D/g, "")}`, "_blank")}
-            className="w-full"
-          >
-            <Phone className="w-4 h-4 mr-2" />
-            Open WhatsApp
-            <ExternalLink className="w-4 h-4 ml-2" />
-          </Button>
-        )
-      case "signal":
-        return (
-          <Button onClick={() => window.open("https://signal.org/", "_blank")} className="w-full">
-            <MessageSquare className="w-4 h-4 mr-2" />
-            Open Signal App
-            <ExternalLink className="w-4 h-4 ml-2" />
-          </Button>
-        )
-      case "daily":
-        return (
-          <Button
-            onClick={() => window.open(sessionDetails.call_link || "https://daily.co/", "_blank")}
-            className="w-full"
-          >
-            <Video className="w-4 h-4 mr-2" />
-            Join Daily.co Call
-            <ExternalLink className="w-4 h-4 ml-2" />
-          </Button>
-        )
-      default:
-        return null
-    }
-  }
-
-  if (paymentSuccess && sessionDetails) {
+  if (showSuccess && sessionData) {
     return (
-      <div className="max-w-2xl mx-auto p-6">
-        <Card>
-          <CardHeader className="text-center">
-            <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
-              <CheckCircle className="w-8 h-8 text-green-600" />
-            </div>
-            <CardTitle className="text-2xl text-green-600">Payment Successful!</CardTitle>
-            <CardDescription>Your private session with Kelvin Creekman has been confirmed</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="bg-muted p-4 rounded-lg">
-              <h3 className="font-semibold mb-2">Session Details</h3>
-              <div className="space-y-2 text-sm">
-                <p>
-                  <strong>Date:</strong> {format(new Date(sessionDetails.session_date), "MMMM d, yyyy")}
-                </p>
-                <p>
-                  <strong>Time:</strong> {format(new Date(sessionDetails.session_date), "h:mm a")}
-                </p>
-                <p>
-                  <strong>Duration:</strong> {sessionDetails.duration_minutes} minutes
-                </p>
-                <p>
-                  <strong>Call Method:</strong>{" "}
-                  {callMethods[sessionDetails.call_method as keyof typeof callMethods].name}
-                </p>
-              </div>
-            </div>
-
-            <Alert>
-              <AlertDescription>
-                <strong>Important Guidelines:</strong>
-                <ul className="mt-2 space-y-1 text-sm">
-                  <li>• Please be ready 5 minutes before your scheduled time</li>
-                  <li>• Ensure you have a stable internet connection</li>
-                  <li>• Find a quiet, well-lit space for the best experience</li>
-                  <li>• Be respectful and follow community guidelines</li>
-                  <li>• Sessions are recorded for quality and safety purposes</li>
-                </ul>
-              </AlertDescription>
-            </Alert>
-
-            <div className="space-y-4">
-              <h3 className="font-semibold">Ready to Connect?</h3>
-              {getCallButton()}
-              <p className="text-sm text-muted-foreground text-center">
-                You can use this button when it's time for your session
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <PaymentSuccess
+        sessionData={sessionData}
+        onClose={() => {
+          setShowSuccess(false)
+          setSessionData(null)
+          window.history.replaceState({}, document.title, window.location.pathname)
+        }}
+      />
     )
   }
 
@@ -402,79 +500,105 @@ export function MeetAndGreetBooking() {
     )
   }
 
+  const isFormValid = booking.date && booking.time && booking.callMethod
+  const selectedMethodData = booking.callMethod ? callMethods[booking.callMethod] : null
+
   return (
     <div className="max-w-4xl mx-auto p-6">
       <div className="text-center mb-8">
         <h1 className="text-3xl font-bold mb-2">Book a Private Session</h1>
         <p className="text-muted-foreground">Get a personal 15-minute video call with Kelvin Creekman</p>
+        <div className="flex items-center justify-center gap-4 mt-4">
+          <Badge variant="secondary" className="bg-fire-500/10 dark:bg-ice-500/10">
+            <Clock className="h-3 w-3 mr-1" />
+            15 minutes
+          </Badge>
+          <Badge variant="secondary" className="bg-fire-500/10 dark:bg-ice-500/10">
+            <Users className="h-3 w-3 mr-1" />
+            1-on-1
+          </Badge>
+          <Badge variant="secondary" className="bg-fire-500/10 dark:bg-ice-500/10">
+            From $49.99
+          </Badge>
+        </div>
       </div>
 
       <div className="grid md:grid-cols-2 gap-8">
         {/* Booking Form */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CalendarDays className="w-5 h-5" />
-              Schedule Your Session
-            </CardTitle>
+            <CardTitle>Schedule Your Session</CardTitle>
+            <CardDescription>Choose your preferred date, time, and call method</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             {/* Date Selection */}
-            <div>
-              <Label className="text-base font-medium">Select Date</Label>
+            <div className="space-y-3">
+              <Label>Select Date</Label>
               <Calendar
                 mode="single"
                 selected={booking.date}
                 onSelect={(date) => setBooking((prev) => ({ ...prev, date, time: "" }))}
                 disabled={(date) => !isDateAvailable(date)}
-                className="rounded-md border mt-2"
+                className="rounded-md border"
               />
+              <p className="text-sm text-muted-foreground">Available dates: Today to 30 days ahead</p>
             </div>
 
             {/* Time Selection */}
             {booking.date && (
-              <div>
-                <Label className="text-base font-medium">Select Time</Label>
-                <div className="grid grid-cols-3 gap-2 mt-2">
-                  {timeSlots.map((time) => (
-                    <Button
-                      key={time}
-                      variant={booking.time === time ? "default" : "outline"}
-                      size="sm"
-                      disabled={!isSlotAvailable(time)}
-                      onClick={() => setBooking((prev) => ({ ...prev, time }))}
-                      className="text-xs"
-                    >
-                      {time}
-                    </Button>
-                  ))}
+              <div className="space-y-3">
+                <Label>Select Time</Label>
+                <div className="grid grid-cols-3 gap-2">
+                  {timeSlots.map((time) => {
+                    const available = isSlotAvailable(time)
+                    return (
+                      <Button
+                        key={time}
+                        variant={booking.time === time ? "default" : "outline"}
+                        size="sm"
+                        disabled={!available}
+                        onClick={() => setBooking((prev) => ({ ...prev, time }))}
+                        className={
+                          booking.time === time
+                            ? "bg-fire-500 hover:bg-fire-600 dark:bg-ice-500 dark:hover:bg-ice-600"
+                            : ""
+                        }
+                      >
+                        {time}
+                      </Button>
+                    )
+                  })}
                 </div>
+                <p className="text-sm text-muted-foreground">All times are in your local timezone</p>
               </div>
             )}
 
             {/* Call Method Selection */}
             {booking.time && (
-              <div>
-                <Label className="text-base font-medium">Choose Call Method</Label>
-                <div className="space-y-3 mt-2">
+              <div className="space-y-3">
+                <Label>Choose Call Method</Label>
+                <div className="space-y-3">
                   {Object.entries(callMethods).map(([key, method]) => {
                     const Icon = method.icon
                     return (
                       <div
                         key={key}
-                        className={`p-3 border rounded-lg cursor-pointer transition-colors ${
+                        className={`p-4 rounded-lg border cursor-pointer transition-colors ${
                           booking.callMethod === key
-                            ? "border-primary bg-primary/5"
-                            : "border-border hover:border-primary/50"
+                            ? "border-fire-500 bg-fire-50 dark:border-ice-500 dark:bg-ice-950"
+                            : "border-border hover:border-fire-300 dark:hover:border-ice-300"
                         }`}
                         onClick={() => setBooking((prev) => ({ ...prev, callMethod: key as any }))}
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
-                            <Icon className="w-5 h-5" />
-                            <span className="font-medium">{method.name}</span>
+                            <Icon className={`h-5 w-5 ${method.color}`} />
+                            <div>
+                              <div className="font-medium">{method.name}</div>
+                              <div className="text-sm text-muted-foreground">15-minute video call</div>
+                            </div>
                           </div>
-                          <Badge variant="secondary">${method.price}</Badge>
+                          <div className="text-lg font-bold">${method.price}</div>
                         </div>
                       </div>
                     )
@@ -484,23 +608,18 @@ export function MeetAndGreetBooking() {
             )}
 
             {/* Contact Information */}
-            {booking.callMethod && (
-              <div>
-                <Label className="text-base font-medium">Contact Information</Label>
-                <div className="mt-2">{renderContactForm()}</div>
-              </div>
-            )}
+            {booking.callMethod && renderContactForm()}
 
             {/* Special Requests */}
             {booking.callMethod && (
-              <div>
+              <div className="space-y-2">
                 <Label htmlFor="requests">Special Requests (Optional)</Label>
                 <Textarea
                   id="requests"
-                  placeholder="Any special topics you'd like to discuss or questions you have..."
+                  placeholder="Any topics you'd like to discuss or questions you have..."
                   value={booking.specialRequests}
                   onChange={(e) => setBooking((prev) => ({ ...prev, specialRequests: e.target.value }))}
-                  className="mt-2"
+                  rows={3}
                 />
               </div>
             )}
@@ -508,67 +627,85 @@ export function MeetAndGreetBooking() {
         </Card>
 
         {/* Booking Summary */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Clock className="w-5 h-5" />
-              Booking Summary
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {booking.date && (
-              <div className="flex justify-between">
-                <span>Date:</span>
-                <span className="font-medium">{format(booking.date, "MMMM d, yyyy")}</span>
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Booking Summary</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {booking.date && (
+                <div className="flex items-center gap-2">
+                  <CalendarDays className="h-4 w-4 text-muted-foreground" />
+                  <span>{format(booking.date, "PPP")}</span>
+                </div>
+              )}
+
+              {booking.time && (
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  <span>{booking.time} (15 minutes)</span>
+                </div>
+              )}
+
+              {selectedMethodData && (
+                <>
+                  <div className="flex items-center gap-2">
+                    <selectedMethodData.icon className="h-4 w-4 text-muted-foreground" />
+                    <span>{selectedMethodData.name}</span>
+                  </div>
+
+                  <Separator />
+
+                  <div className="flex items-center justify-between text-lg font-bold">
+                    <span>Total</span>
+                    <span>${selectedMethodData.price}</span>
+                  </div>
+                </>
+              )}
+
+              <Button
+                onClick={handleBooking}
+                disabled={!isFormValid || isLoading}
+                className="w-full bg-gradient-to-r from-fire-500 to-ice-500 hover:from-fire-600 hover:to-ice-600"
+                size="lg"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <CreditCard className="h-4 w-4 mr-2" />
+                    Book & Pay ${selectedMethodData?.price || "0.00"}
+                  </>
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Important Information */}
+          <Card className="border-amber-200 dark:border-amber-800">
+            <CardHeader>
+              <CardTitle className="text-amber-800 dark:text-amber-200">Important Information</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              <Alert>
+                <Shield className="h-4 w-4" />
+                <AlertDescription>
+                  Sessions are strictly 15 minutes. Please be punctual and ready with your questions.
+                </AlertDescription>
+              </Alert>
+
+              <div className="space-y-2 text-muted-foreground">
+                <p>• No recording or screenshots allowed during the call</p>
+                <p>• Refunds available up to 24 hours before your session</p>
+                <p>• You'll receive confirmation and call details via email</p>
+                <p>• Technical support available if you have connection issues</p>
               </div>
-            )}
-
-            {booking.time && (
-              <div className="flex justify-between">
-                <span>Time:</span>
-                <span className="font-medium">{booking.time}</span>
-              </div>
-            )}
-
-            {booking.callMethod && (
-              <>
-                <div className="flex justify-between">
-                  <span>Call Method:</span>
-                  <span className="font-medium">{callMethods[booking.callMethod].name}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Duration:</span>
-                  <span className="font-medium">15 minutes</span>
-                </div>
-                <Separator />
-                <div className="flex justify-between text-lg font-semibold">
-                  <span>Total:</span>
-                  <span>${callMethods[booking.callMethod].price}</span>
-                </div>
-              </>
-            )}
-
-            <Button
-              onClick={handleBooking}
-              disabled={!booking.date || !booking.time || !booking.callMethod || isLoading}
-              className="w-full"
-            >
-              {isLoading ? "Processing..." : "Book Session"}
-            </Button>
-
-            <Alert>
-              <AlertDescription className="text-sm">
-                <strong>What to expect:</strong>
-                <ul className="mt-1 space-y-1">
-                  <li>• Personal 15-minute video call</li>
-                  <li>• Direct conversation with Kelvin</li>
-                  <li>• Ask questions, get advice, or just chat</li>
-                  <li>• Professional and friendly environment</li>
-                </ul>
-              </AlertDescription>
-            </Alert>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   )

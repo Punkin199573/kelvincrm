@@ -3,16 +3,16 @@
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Instagram, Music } from "lucide-react"
+import { Instagram, Music, ExternalLink, Sparkles, Heart } from "lucide-react"
 import { motion } from "framer-motion"
 
 export function SuperFans() {
   const handleTikTokClick = () => {
-    window.open("https://www.tiktok.com/@kelvin.creekman", "_blank", "noopener,noreferrer")
+    window.open("https://www.tiktok.com/@kelvincrm", "_blank", "noopener,noreferrer")
   }
 
   const handleInstagramClick = () => {
-    window.open("https://www.instagram.com/kelvin.creekman", "_blank", "noopener,noreferrer")
+    window.open("https://www.instagram.com/kelvincrm", "_blank", "noopener,noreferrer")
   }
 
   return (
@@ -29,51 +29,91 @@ export function SuperFans() {
         whileHover={{ scale: 1.05 }}
         className="relative"
       >
-        <Card className="w-80 bg-gradient-to-br from-purple-600 via-blue-600 to-cyan-500 border-0 shadow-2xl overflow-hidden">
-          <div className="absolute inset-0 bg-black/20" />
-          <CardContent className="relative p-6 text-white">
+        {/* Animated background glow */}
+        <motion.div
+          className="absolute inset-0 rounded-2xl bg-gradient-to-r from-fire-500/20 via-electric-500/20 to-ice-500/20 blur-xl"
+          animate={{
+            scale: [1, 1.1, 1],
+            opacity: [0.5, 0.8, 0.5],
+          }}
+          transition={{
+            duration: 3,
+            repeat: Number.POSITIVE_INFINITY,
+            ease: "easeInOut",
+          }}
+        />
+
+        <Card className="relative w-80 bg-gradient-to-br from-slate-900/95 via-slate-800/95 to-slate-900/95 backdrop-blur-sm border-fire-500/30 shadow-2xl">
+          <CardContent className="p-6">
+            {/* Header */}
             <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="text-xl font-bold mb-1">Super Fans</h3>
-                <p className="text-sm text-white/80">Connect with Kelvin</p>
+              <div className="flex items-center gap-2">
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 8, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
+                >
+                  <Sparkles className="h-5 w-5 text-electric-400" />
+                </motion.div>
+                <h3 className="font-bold text-white">Super Fans</h3>
               </div>
-              <Badge variant="secondary" className="bg-white/20 text-white border-white/30">
-                Live
+              <Badge className="bg-fire-500/20 text-fire-300 border-fire-500/30 animate-pulse">
+                <Heart className="h-3 w-3 mr-1" />
+                VIP
               </Badge>
             </div>
 
-            <p className="text-sm text-white/90 mb-6 leading-relaxed">
-              Follow Kelvin on social media for exclusive content, behind-the-scenes moments, and real-time updates!
-            </p>
+            {/* Content */}
+            <div className="space-y-4">
+              <p className="text-slate-300 text-sm leading-relaxed">
+                Join the exclusive community of Kelvin Creekman's biggest supporters! Get behind-the-scenes content,
+                early access to new music, and connect directly with Kelvin.
+              </p>
 
-            <div className="flex gap-3">
-              <Button
-                onClick={handleTikTokClick}
-                className="flex-1 bg-black/30 hover:bg-black/50 border border-white/20 text-white transition-all duration-300 hover:scale-105"
-                size="sm"
-              >
-                <Music className="w-4 h-4 mr-2" />
-                TikTok
-              </Button>
+              {/* Social Media Buttons */}
+              <div className="grid grid-cols-2 gap-3">
+                <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                  <Button
+                    onClick={handleTikTokClick}
+                    className="w-full bg-gradient-to-r from-pink-600 to-red-600 hover:from-pink-700 hover:to-red-700 text-white border-0 shadow-lg"
+                    size="sm"
+                  >
+                    <Music className="h-4 w-4 mr-2" />
+                    TikTok
+                    <ExternalLink className="h-3 w-3 ml-2" />
+                  </Button>
+                </motion.div>
 
-              <Button
-                onClick={handleInstagramClick}
-                className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 border-0 text-white transition-all duration-300 hover:scale-105"
-                size="sm"
-              >
-                <Instagram className="w-4 h-4 mr-2" />
-                Instagram
-              </Button>
-            </div>
+                <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                  <Button
+                    onClick={handleInstagramClick}
+                    className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white border-0 shadow-lg"
+                    size="sm"
+                  >
+                    <Instagram className="h-4 w-4 mr-2" />
+                    Instagram
+                    <ExternalLink className="h-3 w-3 ml-2" />
+                  </Button>
+                </motion.div>
+              </div>
 
-            <div className="mt-4 pt-4 border-t border-white/20">
-              <p className="text-xs text-white/70 text-center">Join thousands of fans worldwide! 🌟</p>
+              {/* Features */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-xs text-slate-400">
+                  <div className="w-1.5 h-1.5 bg-electric-400 rounded-full animate-pulse" />
+                  Exclusive behind-the-scenes content
+                </div>
+                <div className="flex items-center gap-2 text-xs text-slate-400">
+                  <div className="w-1.5 h-1.5 bg-fire-400 rounded-full animate-pulse" />
+                  Early access to new releases
+                </div>
+                <div className="flex items-center gap-2 text-xs text-slate-400">
+                  <div className="w-1.5 h-1.5 bg-ice-400 rounded-full animate-pulse" />
+                  Direct interaction with Kelvin
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
-
-        {/* Animated glow effect */}
-        <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 via-blue-600 to-cyan-500 rounded-lg blur opacity-30 animate-pulse" />
       </motion.div>
     </div>
   )
