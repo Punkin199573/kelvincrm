@@ -1,318 +1,121 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import Image from "next/image"
-import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { ChevronLeft, ChevronRight, Play, Music, Zap, Star, Volume2, VolumeX } from "lucide-react"
-import { SuperFans } from "@/components/super-fans"
-
-const heroSlides = [
-  {
-    id: 1,
-    image: "https://hxmw6qbp8f.ufs.sh/f/QnTCG6I2Leiv9lzV2oWyulGLqpDaYEF3fP8HBOxeAZc1j5mK",
-    video: "https://hxmw6qbp8f.ufs.sh/f/QnTCG6I2LeivKD01MDiWuPikrJS6j87M4CnUXTZIGtLdeaQR",
-    title: "Live Performance",
-    subtitle: "Experience the Electric Energy",
-    description: "Join Kelvin Creekman on stage for an unforgettable rock experience",
-    cta: "Watch Live",
-    ctaLink: "/events",
-    type: "video",
-  },
-  {
-    id: 2,
-    image: "https://hxmw6qbp8f.ufs.sh/f/QnTCG6I2Leiv9lzV2oWyulGLqpDaYEF3fP8HBOxeAZc1j5mK",
-    title: "Studio Sessions",
-    subtitle: "Behind the Music",
-    description: "Get exclusive access to studio recordings and creative process",
-    cta: "Explore Content",
-    ctaLink: "/content",
-    type: "image",
-  },
-  {
-    id: 3,
-    image: "https://hxmw6qbp8f.ufs.sh/f/QnTCG6I2LeivYQF3GfxnSiDlqZLVrxRvHF9tJcze062BAUOo",
-    title: "Meet & Greet",
-    subtitle: "Connect with Kelvin",
-    description: "Book personal video sessions and connect with your favorite artist",
-    cta: "Book Session",
-    ctaLink: "/meet-and-greet",
-    type: "image",
-  },
-  {
-    id: 4,
-    image: "https://hxmw6qbp8f.ufs.sh/f/QnTCG6I2Leivihm19hEOvJReNlH5IQ6gtnE1o3x2W0SVKTAB",
-    video: "https://hxmw6qbp8f.ufs.sh/f/QnTCG6I2LeivKD01MDiWuPikrJS6j87M4CnUXTZIGtLdeaQR",
-    title: "Exclusive Merch",
-    subtitle: "Official Fan Gear",
-    description: "Shop limited edition merchandise and exclusive fan club items",
-    cta: "Shop Now",
-    ctaLink: "/store",
-    type: "video",
-  },
-]
+import { Badge } from "@/components/ui/badge"
+import { Play, Music, Users, Calendar } from "lucide-react"
+import Link from "next/link"
+import Image from "next/image"
 
 export function HeroSection() {
-  const [currentSlide, setCurrentSlide] = useState(0)
-  const [isAutoPlaying, setIsAutoPlaying] = useState(true)
-  const [isMuted, setIsMuted] = useState(true)
-  const [isVideoLoaded, setIsVideoLoaded] = useState(false)
-
-  useEffect(() => {
-    if (!isAutoPlaying) return
-
-    const interval = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % heroSlides.length)
-    }, 8000) // Longer duration for videos
-
-    return () => clearInterval(interval)
-  }, [isAutoPlaying])
-
-  const nextSlide = () => {
-    setCurrentSlide((prev) => (prev + 1) % heroSlides.length)
-    setIsAutoPlaying(false)
-  }
-
-  const prevSlide = () => {
-    setCurrentSlide((prev) => (prev - 1 + heroSlides.length) % heroSlides.length)
-    setIsAutoPlaying(false)
-  }
-
-  const goToSlide = (index: number) => {
-    setCurrentSlide(index)
-    setIsAutoPlaying(false)
-  }
-
-  const toggleMute = () => {
-    setIsMuted(!isMuted)
-  }
-
   return (
-    <section className="relative h-screen w-full overflow-hidden bg-black">
-      {/* Background Slides */}
-       {/* Super Fans positioned in top right */}
-      <div className="absolute top-4 right-4 z-10 hidden lg:block">
-        <SuperFans />
-      </div>
-      <div className="absolute inset-0">
-        {heroSlides.map((slide, index) => (
-          <div
-            key={slide.id}
-            className={`absolute inset-0 transition-opacity duration-1000 ${
-              index === currentSlide ? "opacity-100" : "opacity-0"
-            }`}
-          >
-            {slide.type === "video" && slide.video ? (
-              <video
-                className="absolute inset-0 w-full h-full object-cover"
-                autoPlay
-                loop
-                muted={isMuted}
-                playsInline
-                onLoadedData={() => setIsVideoLoaded(true)}
-              >
-                <source src={slide.video} type="video/mp4" />
-                <Image
-                  src={slide.image || "/placeholder.svg"}
-                  alt={slide.title}
-                  fill
-                  className="object-cover"
-                  priority={index === 0}
-                />
-              </video>
-            ) : (
-              <Image
-                src={slide.image || "/placeholder.svg"}
-                alt={slide.title}
-                fill
-                className="object-cover"
-                priority={index === 0}
-              />
-            )}
-
-            {/* Gradient Overlays for better text readability */}
-            <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/60 to-black/30" />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40" />
-            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/60" />
-          </div>
-        ))}
-      </div>
-
-      {/* Animated Theme Effects */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        {/* Light mode - Fire effects */}
-        <div className="dark:hidden">
-          <div className="absolute top-1/4 left-1/4 w-3 h-3 bg-fire-400 rounded-full animate-ping opacity-60" />
-          <div className="absolute top-1/3 right-1/3 w-2 h-2 bg-ember-400 rounded-full animate-pulse opacity-40" />
-          <div className="absolute bottom-1/4 left-1/3 w-4 h-4 bg-fire-500 rounded-full animate-bounce opacity-30" />
-          <div className="absolute top-1/2 right-1/4 w-2 h-2 bg-ember-300 rounded-full animate-ping opacity-50" />
-          <div className="absolute bottom-1/3 right-1/2 w-3 h-3 bg-fire-600 rounded-full animate-pulse opacity-40" />
-        </div>
-
-        {/* Dark mode - Ice effects */}
-        <div className="hidden dark:block">
-          <div className="absolute top-1/4 left-1/4 w-3 h-3 bg-electric-400 rounded-full animate-ping opacity-60" />
-          <div className="absolute top-1/3 right-1/3 w-2 h-2 bg-frost-400 rounded-full animate-pulse opacity-40" />
-          <div className="absolute bottom-1/4 left-1/3 w-4 h-4 bg-electric-500 rounded-full animate-bounce opacity-30" />
-          <div className="absolute top-1/2 right-1/4 w-2 h-2 bg-frost-300 rounded-full animate-ping opacity-50" />
-          <div className="absolute bottom-1/3 right-1/2 w-3 h-3 bg-electric-600 rounded-full animate-pulse opacity-40" />
-        </div>
-      </div>
+    <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden bg-gradient-to-br from-background via-background to-muted/20">
+      {/* Background Pattern */}
+      <div className="absolute inset-0 bg-grid-pattern opacity-5" />
 
       {/* Content */}
-      <div className="relative z-10 h-full flex items-center">
-        <div className="container mx-auto px-6 lg:px-8">
-          <div className="max-w-4xl">
-            {heroSlides.map((slide, index) => (
-              <div
-                key={slide.id}
-                className={`transition-all duration-1000 ${
-                  index === currentSlide ? "opacity-100 translate-x-0" : "opacity-0 translate-x-8 pointer-events-none"
-                }`}
+      <div className="container mx-auto px-4 py-12 md:py-20">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
+          {/* Text Content */}
+          <div className="text-center lg:text-left space-y-6 lg:space-y-8">
+            <div className="space-y-4">
+              <Badge className="bg-fire-500/20 text-fire-600 border-fire-500/30 dark:bg-ice-500/20 dark:text-ice-400 dark:border-ice-500/30">
+                <Music className="h-3 w-3 mr-1" />
+                Rock & Metal Artist
+              </Badge>
+
+              <h1 className="text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold leading-tight">
+                <span className="bg-gradient-fire dark:bg-gradient-ice bg-clip-text text-transparent">Kelvin</span>
+                <br />
+                <span className="bg-gradient-fire dark:bg-gradient-ice bg-clip-text text-transparent">Creekman</span>
+              </h1>
+
+              <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto lg:mx-0">
+                Join the ultimate fan experience with exclusive content, live sessions, merchandise, and direct access
+                to rock and metal sensation Kelvin Creekman.
+              </p>
+            </div>
+
+            {/* Stats */}
+            <div className="flex flex-wrap justify-center lg:justify-start gap-4 md:gap-6">
+              <div className="text-center">
+                <div className="text-2xl md:text-3xl font-bold text-fire-600 dark:text-ice-400">1K+</div>
+                <div className="text-sm text-muted-foreground">Fans</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl md:text-3xl font-bold text-fire-600 dark:text-ice-400">50+</div>
+                <div className="text-sm text-muted-foreground">Songs</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl md:text-3xl font-bold text-fire-600 dark:text-ice-400">25+</div>
+                <div className="text-sm text-muted-foreground">Events</div>
+              </div>
+            </div>
+
+            {/* CTA Buttons */}
+            <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+              <Button
+                asChild
+                size="lg"
+                className="bg-gradient-fire dark:bg-gradient-ice text-white shadow-lg hover:shadow-xl transition-all"
               >
-                <div className="mb-8">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="flex items-center gap-3 text-primary">
-                      {slide.id === 1 && <Music className="h-6 w-6" />}
-                      {slide.id === 2 && <Play className="h-6 w-6" />}
-                      {slide.id === 3 && <Star className="h-6 w-6" />}
-                      {slide.id === 4 && <Zap className="h-6 w-6" />}
-                      <span className="text-lg font-bold uppercase tracking-wider text-fire-400 dark:text-electric-400">
-                        {slide.subtitle}
-                      </span>
-                    </div>
-                  </div>
+                <Link href="/join">
+                  <Users className="h-5 w-5 mr-2" />
+                  Join Fan Club
+                </Link>
+              </Button>
 
-                  <h1 className="text-6xl md:text-8xl lg:text-9xl font-black mb-8 leading-none">
-                    <span className="bg-gradient-to-r from-white via-fire-200 to-fire-400 dark:from-white dark:via-electric-200 dark:to-electric-400 bg-clip-text text-transparent drop-shadow-2xl">
-                      {slide.title}
-                    </span>
-                  </h1>
+              <Button
+                asChild
+                variant="outline"
+                size="lg"
+                className="border-fire-500/30 text-fire-600 hover:bg-fire-500/10 dark:border-ice-500/30 dark:text-ice-400 dark:hover:bg-ice-500/10 bg-transparent"
+              >
+                <Link href="/events">
+                  <Calendar className="h-5 w-5 mr-2" />
+                  View Events
+                </Link>
+              </Button>
+            </div>
+          </div>
 
-                  <p className="text-2xl md:text-3xl lg:text-4xl text-gray-200 mb-10 leading-relaxed max-w-3xl font-light">
-                    {slide.description}
-                  </p>
-                </div>
+          {/* Image/Visual Content */}
+          <div className="relative order-first lg:order-last">
+            <div className="relative w-full max-w-md mx-auto lg:max-w-none">
+              {/* Main Image */}
+              <div className="relative aspect-square rounded-2xl overflow-hidden bg-gradient-to-br from-fire-500/20 to-electric-500/20 dark:from-ice-500/20 dark:to-electric-500/20 border border-fire-500/20 dark:border-ice-500/20">
+                <Image src="/kelvin-logo.png" alt="Kelvin Creekman" fill className="object-cover" priority />
 
-                <div className="flex flex-col sm:flex-row gap-6">
+                {/* Overlay */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+
+                {/* Play Button Overlay */}
+                <div className="absolute inset-0 flex items-center justify-center">
                   <Button
-                    asChild
                     size="lg"
-                    className="bg-gradient-to-r from-fire-500 to-ember-500 hover:from-fire-600 hover:to-ember-600 dark:from-electric-500 dark:to-frost-500 dark:hover:from-electric-600 dark:hover:to-frost-600 text-white text-xl px-10 py-8 rounded-full shadow-2xl hover:shadow-fire-500/25 dark:hover:shadow-electric-500/25 transition-all duration-300 hover:scale-105"
+                    className="rounded-full w-16 h-16 bg-white/20 backdrop-blur-sm border border-white/30 hover:bg-white/30 transition-all"
                   >
-                    <Link href={slide.ctaLink} className="flex items-center gap-3">
-                      {slide.cta}
-                      <Zap className="h-6 w-6" />
-                    </Link>
-                  </Button>
-
-                  <Button
-                    asChild
-                    variant="outline"
-                    size="lg"
-                    className="border-2 border-fire-400/70 text-fire-200 hover:bg-fire-500/20 hover:border-fire-300 dark:border-electric-400/70 dark:text-electric-200 dark:hover:bg-electric-500/20 dark:hover:border-electric-300 text-xl px-10 py-8 rounded-full bg-black/30 backdrop-blur-sm transition-all duration-300 hover:scale-105"
-                  >
-                    <Link href="/join" className="flex items-center gap-3">
-                      Join Fan Club
-                      <Star className="h-6 w-6" />
-                    </Link>
+                    <Play className="h-6 w-6 text-white ml-1" />
                   </Button>
                 </div>
               </div>
-            ))}
+
+              {/* Floating Elements */}
+              <div className="absolute -top-4 -right-4 bg-fire-500 dark:bg-ice-500 text-white px-3 py-1 rounded-full text-sm font-medium shadow-lg">
+                🎸 Live Now
+              </div>
+
+              <div className="absolute -bottom-4 -left-4 bg-electric-500 text-white px-3 py-1 rounded-full text-sm font-medium shadow-lg">
+                🔥 Trending
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Video Controls */}
-      {heroSlides[currentSlide].type === "video" && (
-        <button
-          onClick={toggleMute}
-          className="absolute bottom-24 right-6 z-30 p-4 rounded-full bg-black/60 hover:bg-black/80 text-white transition-all hover:scale-110 backdrop-blur-sm"
-          aria-label={isMuted ? "Unmute video" : "Mute video"}
-        >
-          {isMuted ? <VolumeX className="h-6 w-6" /> : <Volume2 className="h-6 w-6" />}
-        </button>
-      )}
-
-      {/* Navigation Arrows */}
-      <button
-        onClick={prevSlide}
-        className="absolute left-6 top-1/2 -translate-y-1/2 z-20 p-4 rounded-full bg-black/60 hover:bg-black/80 text-white transition-all hover:scale-110 backdrop-blur-sm shadow-2xl"
-        aria-label="Previous slide"
-      >
-        <ChevronLeft className="h-8 w-8" />
-      </button>
-
-      <button
-        onClick={nextSlide}
-        className="absolute right-6 top-1/2 -translate-y-1/2 z-20 p-4 rounded-full bg-black/60 hover:bg-black/80 text-white transition-all hover:scale-110 backdrop-blur-sm shadow-2xl"
-        aria-label="Next slide"
-      >
-        <ChevronRight className="h-8 w-8" />
-      </button>
-
-      {/* Slide Indicators */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 flex gap-4">
-        {heroSlides.map((slide, index) => (
-          <button
-            key={index}
-            onClick={() => goToSlide(index)}
-            className={`relative w-4 h-4 rounded-full transition-all duration-300 ${
-              index === currentSlide
-                ? "bg-fire-400 dark:bg-electric-400 scale-125 shadow-lg shadow-fire-400/50 dark:shadow-electric-400/50"
-                : "bg-white/50 hover:bg-white/70 hover:scale-110"
-            }`}
-            aria-label={`Go to slide ${index + 1}`}
-          >
-            {slide.type === "video" && <Play className="absolute inset-0 w-2 h-2 m-auto text-black/60" />}
-          </button>
-        ))}
-      </div>
-
-      {/* Auto-play Controls */}
-      <div className="absolute top-6 right-6 z-20 flex gap-3">
-        <button
-          onClick={() => setIsAutoPlaying(!isAutoPlaying)}
-          className={`p-3 rounded-full transition-all backdrop-blur-sm ${
-            isAutoPlaying
-              ? "bg-fire-500/30 text-fire-300 dark:bg-electric-500/30 dark:text-electric-300 shadow-lg"
-              : "bg-gray-500/30 text-gray-300 hover:bg-gray-400/30"
-          }`}
-          aria-label={isAutoPlaying ? "Pause slideshow" : "Play slideshow"}
-        >
-          {isAutoPlaying ? (
-            <div className="w-5 h-5 flex items-center justify-center">
-              <div className="w-1.5 h-4 bg-current mr-1" />
-              <div className="w-1.5 h-4 bg-current" />
-            </div>
-          ) : (
-            <Play className="h-5 w-5" />
-          )}
-        </button>
-      </div>
-
       {/* Scroll Indicator */}
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 animate-bounce">
-        <div className="w-6 h-10 border-2 border-white/50 rounded-full flex justify-center">
-          <div className="w-1 h-3 bg-white/70 rounded-full mt-2 animate-pulse" />
-        </div>
-      </div>
-
-      {/* Lightning/Flame Effect Lines */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        {/* Light mode - Flame effects */}
-        <div className="dark:hidden">
-          <div className="absolute top-0 left-1/4 w-px h-full bg-gradient-to-b from-transparent via-fire-400/30 to-transparent animate-pulse" />
-          <div className="absolute top-0 right-1/3 w-px h-full bg-gradient-to-b from-transparent via-ember-400/30 to-transparent animate-pulse delay-1000" />
-          <div className="absolute top-0 left-3/4 w-px h-full bg-gradient-to-b from-transparent via-fire-500/20 to-transparent animate-pulse delay-2000" />
-        </div>
-
-        {/* Dark mode - Lightning effects */}
-        <div className="hidden dark:block">
-          <div className="absolute top-0 left-1/4 w-px h-full bg-gradient-to-b from-transparent via-electric-400/30 to-transparent animate-pulse" />
-          <div className="absolute top-0 right-1/3 w-px h-full bg-gradient-to-b from-transparent via-frost-400/30 to-transparent animate-pulse delay-1000" />
-          <div className="absolute top-0 left-3/4 w-px h-full bg-gradient-to-b from-transparent via-electric-500/20 to-transparent animate-pulse delay-2000" />
+      <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce">
+        <div className="w-6 h-10 border-2 border-fire-500/30 dark:border-ice-500/30 rounded-full flex justify-center">
+          <div className="w-1 h-3 bg-fire-500 dark:bg-ice-500 rounded-full mt-2 animate-pulse" />
         </div>
       </div>
     </section>

@@ -1,120 +1,131 @@
 "use client"
 
-import { Card, CardContent } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Instagram, Music, ExternalLink, Sparkles, Heart } from "lucide-react"
-import { motion } from "framer-motion"
+import { Button } from "@/components/ui/button"
+import { Crown, Star, Instagram, Music } from "lucide-react"
+import Link from "next/link"
+
+const superFans = [
+  {
+    name: "THERESA RUSSELL",
+    tier: "Avalanche Backstage",
+    instagram: "https://www.instagram.com/theresa4kelvin?igsh=MWdlNnFtaHQyMjBxbA==",
+    tiktok: "https://www.tiktok.com/@theresa4kelvin", // Using a placeholder since only Instagram was provided
+  },
+  {
+    name: "Martha bernie",
+    tier: "Blizzard VIP",
+    instagram: "https://www.instagram.com/martha_bernie", // Using placeholder
+    tiktok: "https://www.tiktok.com/@martha_bernie?_t=ZM-8y3uUlt2V2D&_r=1",
+  },
+  {
+    name: "Manja",
+    tier: "Frost Fan",
+    instagram: "https://www.instagram.com/lk_larr_", // Using placeholder
+    tiktok: "https://www.tiktok.com/@lk_larr_?_t=ZS-8xyuzCdnwMk&_r=1",
+  },
+]
+
+const getTierColor = (tier: string) => {
+  switch (tier) {
+    case "Avalanche Backstage":
+      return "bg-gradient-to-r from-purple-500 to-pink-500"
+    case "Blizzard VIP":
+      return "bg-gradient-to-r from-blue-500 to-cyan-500"
+    case "Frost Fan":
+      return "bg-gradient-to-r from-gray-400 to-gray-600"
+    default:
+      return "bg-gradient-to-r from-gray-400 to-gray-600"
+  }
+}
 
 export function SuperFans() {
-  const handleTikTokClick = () => {
-    window.open("https://www.tiktok.com/@kelvincrm", "_blank", "noopener,noreferrer")
-  }
-
-  const handleInstagramClick = () => {
-    window.open("https://www.instagram.com/kelvincrm", "_blank", "noopener,noreferrer")
-  }
-
   return (
-    <div className="fixed bottom-6 right-6 z-50">
-      <motion.div
-        initial={{ scale: 0, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{
-          type: "spring",
-          stiffness: 260,
-          damping: 20,
-          delay: 0.5,
-        }}
-        whileHover={{ scale: 1.05 }}
-        className="relative"
-      >
-        {/* Animated background glow */}
-        <motion.div
-          className="absolute inset-0 rounded-2xl bg-gradient-to-r from-fire-500/20 via-electric-500/20 to-ice-500/20 blur-xl"
-          animate={{
-            scale: [1, 1.1, 1],
-            opacity: [0.5, 0.8, 0.5],
-          }}
-          transition={{
-            duration: 3,
-            repeat: Number.POSITIVE_INFINITY,
-            ease: "easeInOut",
-          }}
-        />
+    <section className="py-16 bg-gradient-to-br from-background via-background to-muted/20">
+      <div className="container mx-auto px-4">
+        <div className="text-center mb-12">
+          <h2 className="text-3xl md:text-4xl font-bold mb-4 bg-gradient-fire dark:bg-gradient-ice bg-clip-text text-transparent">
+            Super Fans Hall of Fame
+          </h2>
+          <p className="text-muted-foreground max-w-2xl mx-auto">
+            Meet our most dedicated fans who've shown incredible support for Kelvin Creekman's music journey
+          </p>
+        </div>
 
-        <Card className="relative w-80 bg-gradient-to-br from-slate-900/95 via-slate-800/95 to-slate-900/95 backdrop-blur-sm border-fire-500/30 shadow-2xl">
-          <CardContent className="p-6">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 8, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
-                >
-                  <Sparkles className="h-5 w-5 text-electric-400" />
-                </motion.div>
-                <h3 className="font-bold text-white">Super Fans</h3>
-              </div>
-              <Badge className="bg-fire-500/20 text-fire-300 border-fire-500/30 animate-pulse">
-                <Heart className="h-3 w-3 mr-1" />
-                VIP
-              </Badge>
-            </div>
-
-            {/* Content */}
-            <div className="space-y-4">
-              <p className="text-slate-300 text-sm leading-relaxed">
-                Join the exclusive community of Kelvin Creekman's biggest supporters! Get behind-the-scenes content,
-                early access to new music, and connect directly with Kelvin.
-              </p>
-
-              {/* Social Media Buttons */}
-              <div className="grid grid-cols-2 gap-3">
-                <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                  <Button
-                    onClick={handleTikTokClick}
-                    className="w-full bg-gradient-to-r from-pink-600 to-red-600 hover:from-pink-700 hover:to-red-700 text-white border-0 shadow-lg"
-                    size="sm"
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
+          {superFans.map((fan, index) => (
+            <Card
+              key={fan.name}
+              className="border-fire-500/20 dark:border-ice-500/20 hover:shadow-lg transition-all duration-300 group"
+            >
+              <CardHeader className="text-center pb-4">
+                <div className="relative mx-auto mb-4">
+                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-fire-500 to-electric-500 dark:from-ice-500 dark:to-electric-500 flex items-center justify-center">
+                    <Crown className="h-10 w-10 text-white" />
+                  </div>
+                  <div className="absolute -top-2 -right-2">
+                    <Badge className={`${getTierColor(fan.tier)} text-white border-0`}>
+                      <Star className="h-3 w-3 mr-1" />#{index + 1}
+                    </Badge>
+                  </div>
+                </div>
+                <CardTitle className="text-xl font-bold text-fire-600 dark:text-ice-400">{fan.name}</CardTitle>
+                <CardDescription className="font-medium">
+                  <Badge
+                    variant="outline"
+                    className="border-fire-500/30 text-fire-600 dark:border-ice-500/30 dark:text-ice-400"
                   >
-                    <Music className="h-4 w-4 mr-2" />
-                    TikTok
-                    <ExternalLink className="h-3 w-3 ml-2" />
-                  </Button>
-                </motion.div>
+                    {fan.tier}
+                  </Badge>
+                </CardDescription>
+              </CardHeader>
 
-                <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+              <CardContent className="text-center space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  A true supporter of Kelvin's rock and metal journey, showing incredible dedication to the music and
+                  community.
+                </p>
+
+                <div className="flex justify-center gap-3">
                   <Button
-                    onClick={handleInstagramClick}
-                    className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white border-0 shadow-lg"
+                    asChild
                     size="sm"
+                    variant="outline"
+                    className="border-pink-500/30 text-pink-600 hover:bg-pink-500/10 dark:border-pink-400/30 dark:text-pink-400 bg-transparent"
                   >
-                    <Instagram className="h-4 w-4 mr-2" />
-                    Instagram
-                    <ExternalLink className="h-3 w-3 ml-2" />
+                    <Link href={fan.instagram} target="_blank" rel="noopener noreferrer">
+                      <Instagram className="h-4 w-4 mr-2" />
+                      Instagram
+                    </Link>
                   </Button>
-                </motion.div>
-              </div>
 
-              {/* Features */}
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-xs text-slate-400">
-                  <div className="w-1.5 h-1.5 bg-electric-400 rounded-full animate-pulse" />
-                  Exclusive behind-the-scenes content
+                  <Button
+                    asChild
+                    size="sm"
+                    variant="outline"
+                    className="border-purple-500/30 text-purple-600 hover:bg-purple-500/10 dark:border-purple-400/30 dark:text-purple-400 bg-transparent"
+                  >
+                    <Link href={fan.tiktok} target="_blank" rel="noopener noreferrer">
+                      <Music className="h-4 w-4 mr-2" />
+                      TikTok
+                    </Link>
+                  </Button>
                 </div>
-                <div className="flex items-center gap-2 text-xs text-slate-400">
-                  <div className="w-1.5 h-1.5 bg-fire-400 rounded-full animate-pulse" />
-                  Early access to new releases
-                </div>
-                <div className="flex items-center gap-2 text-xs text-slate-400">
-                  <div className="w-1.5 h-1.5 bg-ice-400 rounded-full animate-pulse" />
-                  Direct interaction with Kelvin
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
-    </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        <div className="text-center mt-12">
+          <p className="text-muted-foreground mb-6">
+            Want to join our Super Fans Hall of Fame? Show your support and become part of the community!
+          </p>
+          <Button asChild className="bg-gradient-fire dark:bg-gradient-ice">
+            <Link href="/join">Join the Fan Club</Link>
+          </Button>
+        </div>
+      </div>
+    </section>
   )
 }
