@@ -1,96 +1,82 @@
 import type { Metadata } from "next"
 import { StoreHeader } from "@/components/store/store-header"
-import { StoreBanner } from "@/components/store/store-banner"
-import { StoreContent } from "@/components/store/store-content"
+import { StoreGrid } from "@/components/store/store-grid"
 
 export const metadata: Metadata = {
   title: "Merchandise Store | Kelvin Creekman Fan Club",
   description: "Official Kelvin Creekman merchandise and exclusive fan club items",
 }
 
-// Mock products using the uploaded images
+// Mock products using static images
 const products = [
   {
     id: "1",
-    name: "Kelvin Creekman Beanie",
-    description: "Premium knit beanie with embroidered Kelvin Creekman logo",
-    price: 24.99,
-    image: "/merch/beanie.jpg",
+    name: "Kelvin Creekman Signature T-Shirt",
+    description: "Premium cotton t-shirt with exclusive Kelvin Creekman design",
+    price: 29.99,
+    image: "/store/product1.png",
     category: "apparel",
     inStock: true,
     isExclusive: false,
-    sizes: ["One Size"],
-    colors: ["Black"],
   },
   {
     id: "2",
-    name: "Sacred Geometry Mug - Black",
-    description: "15oz ceramic mug featuring the iconic sacred geometry design",
-    price: 18.99,
-    image: "/merch/mug-black.webp",
-    category: "accessories",
-    inStock: true,
-    isExclusive: false,
-    sizes: ["15oz"],
-    colors: ["Black"],
-  },
-  {
-    id: "3",
-    name: "Sacred Geometry Pin",
-    description: "High-quality enamel pin with sacred geometry design",
-    price: 12.99,
-    image: "/merch/pin.webp",
-    category: "accessories",
-    inStock: true,
-    isExclusive: true,
-    sizes: ["2 inch"],
-    colors: ["Black/White"],
-  },
-  {
-    id: "4",
-    name: "Kelvin Creekman Notepad",
-    description: "Premium notepad for jotting down your thoughts and lyrics",
-    price: 8.99,
-    image: "/merch/notepad.webp",
-    category: "accessories",
-    inStock: true,
-    isExclusive: false,
-    sizes: ["A5"],
-    colors: ["White"],
-  },
-  {
-    id: "5",
-    name: "Sacred Geometry Mug - White",
-    description: "15oz ceramic mug with sacred geometry design on white background",
-    price: 18.99,
-    image: "/merch/mug-white.webp",
-    category: "accessories",
-    inStock: true,
-    isExclusive: false,
-    sizes: ["15oz"],
-    colors: ["White"],
-  },
-  {
-    id: "6",
-    name: "Kelvin Portrait T-Shirt",
-    description: "Exclusive t-shirt featuring Kelvin Creekman portrait design",
-    price: 29.99,
-    image: "/merch/kelvin-tshirt.webp",
+    name: "Sacred Geometry Hoodie",
+    description: "Comfortable hoodie featuring the iconic sacred geometry artwork",
+    price: 59.99,
+    image: "/store/product2.png",
     category: "apparel",
     inStock: true,
     isExclusive: true,
-    sizes: ["XS", "S", "M", "L", "XL", "XXL"],
-    colors: ["Black"],
+  },
+  {
+    id: "3",
+    name: "Kelvin's Coffee Mug",
+    description: "15oz ceramic mug perfect for your morning coffee ritual",
+    price: 18.99,
+    image: "/store/product3.png",
+    category: "accessories",
+    inStock: true,
+    isExclusive: false,
+  },
+  {
+    id: "4",
+    name: "Limited Edition Vinyl Record",
+    description: "Exclusive vinyl pressing of Kelvin's latest album",
+    price: 34.99,
+    image: "/store/product4.png",
+    category: "music",
+    inStock: true,
+    isExclusive: true,
+  },
+  {
+    id: "5",
+    name: "Meditation Beanie",
+    description: "Soft knit beanie for your spiritual journey",
+    price: 24.99,
+    image: "/store/product5.png",
+    category: "apparel",
+    inStock: true,
+    isExclusive: false,
+  },
+  {
+    id: "6",
+    name: "Wisdom Journal",
+    description: "Premium leather-bound journal for your thoughts and reflections",
+    price: 39.99,
+    image: "/store/product6.png",
+    category: "accessories",
+    inStock: false,
+    isExclusive: true,
   },
 ]
 
 export default function StorePage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
-      <div className="container py-8 space-y-8">
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto px-4 py-8">
         <StoreHeader />
-        <StoreBanner />
-        <StoreContent products={products} />
+        <StoreGrid products={products} />
       </div>
     </div>
   )
