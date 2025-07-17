@@ -5,7 +5,7 @@ import { Calendar } from "lucide-react"
 
 export default function MeetAndGreetPage() {
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
       <div className="text-center mb-8">
         <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
           Meet & Greet with Kelvin

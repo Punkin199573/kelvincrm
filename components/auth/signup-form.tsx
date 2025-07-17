@@ -3,6 +3,7 @@
 import type React from "react"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -135,10 +136,8 @@ export function SignupForm() {
               <Card
                 key={tier.id}
                 className={`cursor-pointer transition-all duration-200 ${
-                  selectedTier === tier.id
-                    ? "border-fire-500 dark:border-ice-500 bg-fire-50 dark:bg-ice-950/20"
-                    : "border-muted hover:border-fire-300 dark:hover:border-ice-300"
-                } ${tier.popular ? "ring-2 ring-fire-500 dark:ring-ice-500" : ""}`}
+                  selectedTier === tier.id ? "border-primary bg-primary/5" : "border-muted hover:border-primary/50"
+                } ${tier.popular ? "ring-2 ring-primary" : ""}`}
                 onClick={() => setSelectedTier(tier.id)}
               >
                 <CardHeader className="pb-2">
@@ -148,7 +147,7 @@ export function SignupForm() {
                         <Icon className="h-4 w-4 text-white" />
                       </div>
                       <CardTitle className="text-lg">{tier.name}</CardTitle>
-                      {tier.popular && <Badge className="bg-fire-500 dark:bg-ice-500 text-white">Most Popular</Badge>}
+                      {tier.popular && <Badge className="bg-primary text-primary-foreground">Most Popular</Badge>}
                     </div>
                     <div className="text-right">
                       <div className="text-2xl font-bold">${tier.price}</div>
@@ -183,7 +182,6 @@ export function SignupForm() {
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
             required
-            className="border-fire-500/20 dark:border-ice-500/20 focus:border-fire-500 dark:focus:border-ice-500"
           />
         </div>
 
@@ -196,7 +194,6 @@ export function SignupForm() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            className="border-fire-500/20 dark:border-ice-500/20 focus:border-fire-500 dark:focus:border-ice-500"
           />
         </div>
 
@@ -210,7 +207,7 @@ export function SignupForm() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="border-fire-500/20 dark:border-ice-500/20 focus:border-fire-500 dark:focus:border-ice-500 pr-10"
+              className="pr-10"
             />
             <Button
               type="button"
@@ -237,15 +234,10 @@ export function SignupForm() {
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
             required
-            className="border-fire-500/20 dark:border-ice-500/20 focus:border-fire-500 dark:focus:border-ice-500"
           />
         </div>
 
-        <Button
-          type="submit"
-          className="w-full bg-gradient-fire dark:bg-gradient-ice hover:opacity-90 transition-opacity"
-          disabled={isLoading}
-        >
+        <Button type="submit" className="w-full" disabled={isLoading}>
           {isLoading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -255,6 +247,13 @@ export function SignupForm() {
             `Continue to Payment - $${membershipTiers.find((t) => t.id === selectedTier)?.price}/month`
           )}
         </Button>
+
+        <div className="text-center text-sm text-muted-foreground">
+          Already have an account?{" "}
+          <Link href="/login" className="text-primary hover:underline font-medium">
+            Sign in here
+          </Link>
+        </div>
       </form>
     </div>
   )

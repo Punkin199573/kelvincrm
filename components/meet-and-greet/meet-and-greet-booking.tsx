@@ -10,8 +10,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Separator } from "@/components/ui/separator"
 import { Clock, Video, Shield, CreditCard, Loader2, MessageSquare } from "lucide-react"
 import { useAuth } from "@/components/auth/auth-provider"
-import { toast } from "sonner"
-import { supabase } from "@/lib/supabase" // Declare the supabase variable
+import { useToast } from "@/hooks/use-toast"
 
 interface BookingData {
   sessionDate: string
@@ -51,6 +50,7 @@ export function MeetAndGreetBooking() {
   })
 
   const { user } = useAuth()
+  const { toast } = useToast()
 
   useEffect(() => {
     if (user?.email) {
@@ -63,17 +63,29 @@ export function MeetAndGreetBooking() {
 
   const handleBooking = async () => {
     if (!user) {
-      toast.error("Please log in to book a session")
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to book a session",
+        variant: "destructive",
+      })
       return
     }
 
     if (!booking.sessionDate || !booking.sessionTime) {
-      toast.error("Please select a date and time")
+      toast({
+        title: "Missing Information",
+        description: "Please select a date and time",
+        variant: "destructive",
+      })
       return
     }
 
     if (!booking.contactInfo.email) {
-      toast.error("Email is required for booking")
+      toast({
+        title: "Email Required",
+        description: "Email is required for booking",
+        variant: "destructive",
+      })
       return
     }
 
@@ -85,7 +97,6 @@ export function MeetAndGreetBooking() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
         },
         body: JSON.stringify({
           sessionId: `session_${Date.now()}`, // Generate unique session ID
@@ -96,6 +107,7 @@ export function MeetAndGreetBooking() {
           specialRequests: booking.specialRequests,
           price: sessionPrice,
           duration: sessionDuration,
+          userId: user.id,
         }),
       })
 
@@ -108,7 +120,11 @@ export function MeetAndGreetBooking() {
       }
     } catch (error) {
       console.error("Booking error:", error)
-      toast.error("Failed to process booking. Please try again.")
+      toast({
+        title: "Booking Failed",
+        description: "Failed to process booking. Please try again.",
+        variant: "destructive",
+      })
     } finally {
       setIsBooking(false)
     }
@@ -191,9 +207,9 @@ export function MeetAndGreetBooking() {
               <span>${sessionPrice}</span>
             </div>
 
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <h4 className="font-medium text-blue-900 mb-2">What to Expect:</h4>
-              <ul className="text-blue-800 text-sm space-y-1">
+            <div className="bg-blue-50 dark:bg-blue-950/20 p-4 rounded-lg">
+              <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">What to Expect:</h4>
+              <ul className="text-blue-800 dark:text-blue-200 text-sm space-y-1">
                 <li>• Personal conversation with Kelvin</li>
                 <li>• Ask questions about music, career, or life</li>
                 <li>• Get exclusive insights and stories</li>
@@ -216,7 +232,7 @@ export function MeetAndGreetBooking() {
                 id="date"
                 value={booking.sessionDate}
                 onChange={(e) => setBooking((prev) => ({ ...prev, sessionDate: e.target.value }))}
-                className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full p-2 border border-input rounded-md focus:ring-2 focus:ring-primary focus:border-transparent bg-background"
               >
                 <option value="">Select a date</option>
                 {getAvailableDates().map((date) => (
@@ -238,7 +254,7 @@ export function MeetAndGreetBooking() {
                 id="time"
                 value={booking.sessionTime}
                 onChange={(e) => setBooking((prev) => ({ ...prev, sessionTime: e.target.value }))}
-                className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full p-2 border border-input rounded-md focus:ring-2 focus:ring-primary focus:border-transparent bg-background"
                 disabled={!booking.sessionDate}
               >
                 <option value="">Select a time</option>
@@ -306,7 +322,7 @@ export function MeetAndGreetBooking() {
             <Button
               onClick={handleBooking}
               disabled={isBooking || !booking.sessionDate || !booking.sessionTime || !booking.contactInfo.email}
-              className="w-full bg-blue-600 hover:bg-blue-700"
+              className="w-full"
               size="lg"
             >
               {isBooking ? (
