@@ -9,9 +9,6 @@ export const ourFileRouter = {
       return { userId: "user-id" }; // Replace with real auth if needed
     })
     .onUploadComplete(async ({ metadata, file }) => {
-      console.log("Profile image upload complete for userId:", metadata.userId);
-      console.log("File URL:", file.url);
-
       const { error } = await supabase.from("images").insert({
         name: file.name,
         url: file.url,
@@ -22,18 +19,14 @@ export const ourFileRouter = {
       });
 
       if (error) console.error("Supabase insert error (profileImage):", error);
-
-      return { uploadedBy: metadata.userId, url: file.url };
+      return { uploadedBy: metadata.userId };
     }),
 
   websiteImage: f({ image: { maxFileSize: "8MB", maxFileCount: 10 } })
     .middleware(async () => {
-      return { userId: "admin-user-id" }; // Replace with real auth if needed
+      return { userId: "admin-user-id" };
     })
     .onUploadComplete(async ({ metadata, file }) => {
-      console.log("Website image upload complete for userId:", metadata.userId);
-      console.log("File URL:", file.url);
-
       const { error } = await supabase.from("images").insert({
         name: file.name,
         url: file.url,
@@ -44,8 +37,7 @@ export const ourFileRouter = {
       });
 
       if (error) console.error("Supabase insert error (websiteImage):", error);
-
-      return { uploadedBy: metadata.userId, url: file.url };
+      return { uploadedBy: metadata.userId };
     }),
 
   contentMedia: f({
@@ -54,12 +46,9 @@ export const ourFileRouter = {
     audio: { maxFileSize: "32MB", maxFileCount: 5 },
   })
     .middleware(async () => {
-      return { userId: "admin-user-id" }; // Replace with real auth if needed
+      return { userId: "admin-user-id" };
     })
     .onUploadComplete(async ({ metadata, file }) => {
-      console.log("Content media upload complete for userId:", metadata.userId);
-      console.log("File URL:", file.url);
-
       const { error } = await supabase.from("images").insert({
         name: file.name,
         url: file.url,
@@ -70,8 +59,7 @@ export const ourFileRouter = {
       });
 
       if (error) console.error("Supabase insert error (contentMedia):", error);
-
-      return { uploadedBy: metadata.userId, url: file.url };
+      return { uploadedBy: metadata.userId };
     }),
 } satisfies FileRouter;
 
