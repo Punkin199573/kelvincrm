@@ -4,9 +4,16 @@ import { useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Crown, Instagram, Music, ChevronDown, ChevronUp } from "lucide-react"
+import { Crown, Instagram, ChevronDown, ChevronUp } from "lucide-react"
 import Image from "next/image"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
+
+// Custom TikTok icon component
+const TikTokIcon = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+    <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z" />
+  </svg>
+)
 
 const superFans = [
   {
@@ -32,8 +39,8 @@ const superFans = [
       {
         platform: "TikTok",
         url: "https://www.tiktok.com/@martha_bernie?_t=ZM-8y3uUlt2V2D&_r=1",
-        icon: Music,
-        color: "from-pink-600 to-red-600 hover:from-pink-700 hover:to-red-700",
+        icon: TikTokIcon,
+        color: "from-black to-red-600 hover:from-gray-800 hover:to-red-700",
       },
     ],
   },
@@ -46,8 +53,8 @@ const superFans = [
       {
         platform: "TikTok",
         url: "https://www.tiktok.com/@lk_larr_?_t=ZS-8xyuzCdnwMk&_r=1",
-        icon: Music,
-        color: "from-pink-600 to-red-600 hover:from-pink-700 hover:to-red-700",
+        icon: TikTokIcon,
+        color: "from-black to-red-600 hover:from-gray-800 hover:to-red-700",
       },
     ],
   },

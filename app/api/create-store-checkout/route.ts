@@ -1,6 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
 import Stripe from "stripe"
-import { supabase } from "@/lib/supabase/server"
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2024-06-20",
@@ -8,67 +7,47 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 export async function POST(request: NextRequest) {
   try {
-    const { items, userId, total } = await request.json()
+    const { items, userId, userEmail } = await request.json()
 
-    if (!items || items.length === 0) {
-      return NextResponse.json({ error: "No items in cart" }, { status: 400 })
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return NextResponse.json({ error: "No items provided" }, { status: 400 })
     }
 
-    // Create order in database
-    const { data: order, error: orderError } = await supabase
-      .from("orders")
-      .insert({
-        user_id: userId,
-        total_amount: total,
-        status: "pending",
-        items: items,
-      })
-      .select()
-      .single()
+    // Calculate total amount
+    const totalAmount = items.reduce((sum, item) => sum + item.price * item.quantity, 0)
 
-    if (orderError) {
-      throw new Error(`Failed to create order: ${orderError.message}`)
-    }
+    // Create line items for Stripe
+    const lineItems = items.map((item) => ({
+      price_data: {
+        currency: "usd",
+        product_data: {
+          name: item.name,
+          images: item.image ? [item.image] : [],
+        },
+        unit_amount: Math.round(item.price * 100), // Convert to cents
+      },
+      quantity: item.quantity,
+    }))
 
-    // Create Stripe checkout session
+    // Create checkout session
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
-      line_items: items.map((item: any) => ({
-        price_data: {
-          currency: "usd",
-          product_data: {
-            name: item.name,
-            images: item.image ? [item.image] : [],
-            metadata: {
-              size: item.size || "",
-              color: item.color || "",
-            },
-          },
-          unit_amount: Math.round(item.price * 100), // Convert to cents
-        },
-        quantity: item.quantity,
-      })),
+      line_items: lineItems,
       mode: "payment",
-      success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/store/success?session_id={CHECKOUT_SESSION_ID}&order_id=${order.id}`,
-      cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/store?checkout=cancelled`,
+      success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/store/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/store`,
+      customer_email: userEmail,
       metadata: {
-        orderId: order.id,
-        userId: userId,
-      },
-      shipping_address_collection: {
-        allowed_countries: ["US", "CA", "GB", "AU", "DE", "FR", "IT", "ES", "NL", "BE"],
-      },
-      phone_number_collection: {
-        enabled: true,
+        type: "store_purchase",
+        userId: userId || "guest",
+        cartItems: JSON.stringify(items),
+        totalAmount: totalAmount.toString(),
       },
     })
 
-    // Update order with Stripe session ID
-    await supabase.from("orders").update({ stripe_session_id: session.id }).eq("id", order.id)
-
-    return NextResponse.json({ url: session.url })
+    return NextResponse.json({ url: session.url, sessionId: session.id })
   } catch (error: any) {
-    console.error("Error creating checkout session:", error)
+    console.error("Error creating store checkout session:", error)
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }

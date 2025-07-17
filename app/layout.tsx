@@ -5,17 +5,18 @@ import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { AuthProvider } from "@/components/auth/auth-provider"
 import { CartProvider } from "@/components/store/cart-context"
-import { Toaster } from "@/components/ui/toaster"
 import { MainNav } from "@/components/main-nav"
 import { SiteFooter } from "@/components/site-footer"
+import { SuperFansWidget } from "@/components/super-fans-widget"
 import { MobileFooterNav } from "@/components/mobile-footer-nav"
+import { Toaster } from "@/components/ui/toaster"
 
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   title: "Kelvin Creekman Fan Club",
-  description: "Official fan club for rock and metal musician Kelvin Creekman",
-  generator: "v0.dev",
+  description: "Join the official Kelvin Creekman fan club for exclusive content, events, and merchandise.",
+    generator: 'v0.dev'
 }
 
 export default function RootLayout({
@@ -31,9 +32,10 @@ export default function RootLayout({
             <CartProvider>
               <div className="relative flex min-h-screen flex-col">
                 <MainNav />
-                <main className="flex-1 pb-20 md:pb-0">{children}</main>
+                <main className="flex-1">{children}</main>
                 <SiteFooter />
                 <MobileFooterNav />
+                <SuperFansWidget />
               </div>
               <Toaster />
             </CartProvider>

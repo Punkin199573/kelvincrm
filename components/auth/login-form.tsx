@@ -67,9 +67,9 @@ export function LoginForm() {
   }
 
   return (
-    <Card className="w-full max-w-md mx-auto border-fire-500/20 dark:border-ice-500/20">
+    <Card className="w-full max-w-md mx-auto border-primary/20">
       <CardHeader className="space-y-1">
-        <CardTitle className="text-2xl text-center text-fire-600 dark:text-ice-400">Welcome Back</CardTitle>
+        <CardTitle className="text-2xl text-center text-primary">Welcome Back</CardTitle>
         <p className="text-center text-muted-foreground">Sign in to your Kelvin Creekman fan account</p>
       </CardHeader>
       <CardContent>
@@ -83,7 +83,7 @@ export function LoginForm() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="border-fire-500/20 dark:border-ice-500/20 focus:border-fire-500 dark:focus:border-ice-500"
+              className="border-primary/20 focus:border-primary"
             />
           </div>
 
@@ -97,7 +97,7 @@ export function LoginForm() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="border-fire-500/20 dark:border-ice-500/20 focus:border-fire-500 dark:focus:border-ice-500 pr-10"
+                className="border-primary/20 focus:border-primary pr-10"
               />
               <Button
                 type="button"
@@ -117,7 +117,7 @@ export function LoginForm() {
 
           <Button
             type="submit"
-            className="w-full bg-gradient-fire dark:bg-gradient-ice hover:opacity-90 transition-opacity"
+            className="w-full bg-primary hover:bg-primary/90 transition-colors"
             disabled={isLoading}
           >
             {isLoading ? (
@@ -135,7 +135,7 @@ export function LoginForm() {
           <Button
             type="button"
             variant="ghost"
-            className="w-full text-fire-600 dark:text-ice-400 hover:text-fire-700 dark:hover:text-ice-300"
+            className="w-full text-primary hover:text-primary/80"
             onClick={handleResetPassword}
             disabled={isResetLoading}
           >
@@ -154,7 +154,7 @@ export function LoginForm() {
 
           <div className="text-center text-sm text-muted-foreground">
             Don't have an account?{" "}
-            <Link href="/signup" className="text-fire-600 dark:text-ice-400 hover:underline font-medium">
+            <Link href="/signup" className="text-primary hover:underline font-medium">
               Sign up here
             </Link>
           </div>

@@ -5,9 +5,10 @@ import Image from "next/image"
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { ShoppingCart, Star, AlertCircle } from "lucide-react"
+import { useCart } from "@/components/store/cart-context"
 import { useToast } from "@/hooks/use-toast"
-import { ShoppingCart, Crown, Filter, Grid, List } from "lucide-react"
+import { StoreHeader } from "./store-header"
 
 interface Product {
   id: string
@@ -25,201 +26,147 @@ interface StoreGridProps {
 }
 
 export function StoreGrid({ products }: StoreGridProps) {
-  const [selectedCategory, setSelectedCategory] = useState<string>("all")
+  const [searchTerm, setSearchTerm] = useState("")
+  const [selectedCategory, setSelectedCategory] = useState("all")
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
+  const { addItem } = useCart()
   const { toast } = useToast()
 
-  const categories = [
-    { value: "all", label: "All Items" },
-    { value: "apparel", label: "Apparel" },
-    { value: "accessories", label: "Accessories" },
-    { value: "music", label: "Music" },
-  ]
-
-  const filteredProducts = products.filter(
-    (product) => selectedCategory === "all" || product.category === selectedCategory,
-  )
+  // Filter products based on search and category
+  const filteredProducts = products.filter((product) => {
+    const matchesSearch =
+      product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      product.description.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesCategory = selectedCategory === "all" || product.category === selectedCategory
+    return matchesSearch && matchesCategory
+  })
 
   const handleAddToCart = (product: Product) => {
-    if (!product.inStock) return
+    if (!product.inStock) {
+      toast({
+        title: "Out of Stock",
+        description: "This item is currently out of stock.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    addItem({
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      image: product.image,
+      quantity: 1,
+    })
 
     toast({
-      title: "Added to cart! 🛒",
+      title: "Added to Cart",
       description: `${product.name} has been added to your cart.`,
     })
   }
 
   return (
     <div className="space-y-8">
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4 text-muted-foreground" />
-            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Category" />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.map((category) => (
-                  <SelectItem key={category.value} value={category.value}>
-                    {category.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+      <StoreHeader
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        selectedCategory={selectedCategory}
+        onCategoryChange={setSelectedCategory}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+        totalProducts={products.length}
+      />
 
-          <div className="text-sm text-muted-foreground">
-            {filteredProducts.length} item{filteredProducts.length !== 1 ? "s" : ""}
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Button variant={viewMode === "grid" ? "default" : "outline"} size="sm" onClick={() => setViewMode("grid")}>
-            <Grid className="h-4 w-4" />
-          </Button>
-          <Button variant={viewMode === "list" ? "default" : "outline"} size="sm" onClick={() => setViewMode("list")}>
-            <List className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-
-      {/* Products */}
-      <div className={viewMode === "grid" ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" : "space-y-4"}>
+      {/* Products Grid */}
+      <div
+        className={`grid gap-6 ${viewMode === "grid" ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"}`}
+      >
         {filteredProducts.map((product) => (
-          <ProductCard key={product.id} product={product} viewMode={viewMode} onAddToCart={handleAddToCart} />
-        ))}
-      </div>
-
-      {filteredProducts.length === 0 && (
-        <div className="text-center py-12">
-          <div className="w-24 h-24 mx-auto mb-4 bg-muted rounded-full flex items-center justify-center">
-            <ShoppingCart className="h-12 w-12 text-muted-foreground" />
-          </div>
-          <h3 className="text-lg font-semibold mb-2">No products found</h3>
-          <p className="text-muted-foreground">Try selecting a different category to see more items.</p>
-        </div>
-      )}
-    </div>
-  )
-}
-
-interface ProductCardProps {
-  product: Product
-  viewMode: "grid" | "list"
-  onAddToCart: (product: Product) => void
-}
-
-function ProductCard({ product, viewMode, onAddToCart }: ProductCardProps) {
-  if (viewMode === "list") {
-    return (
-      <Card className="hover:shadow-lg transition-shadow duration-200">
-        <div className="flex">
-          <div className="relative w-32 h-32 flex-shrink-0">
-            <Image
-              src={product.image || "/placeholder.svg"}
-              alt={product.name}
-              fill
-              className="object-cover rounded-l-lg"
-              sizes="128px"
-            />
-            {product.isExclusive && (
-              <Badge className="absolute top-2 left-2 bg-yellow-500 text-yellow-900">
-                <Crown className="h-3 w-3 mr-1" />
-                Exclusive
-              </Badge>
-            )}
-          </div>
-
-          <div className="flex-1 p-6 flex justify-between">
-            <div className="space-y-2">
-              <h3 className="font-semibold text-lg">{product.name}</h3>
-              <p className="text-sm text-muted-foreground line-clamp-2">{product.description}</p>
-              <div className="flex items-center gap-2">
-                <Badge variant="outline" className="capitalize">
-                  {product.category}
-                </Badge>
-                {!product.inStock && <Badge variant="destructive">Out of Stock</Badge>}
+          <Card
+            key={product.id}
+            className={`group hover:shadow-lg transition-all duration-300 ${
+              !product.inStock ? "opacity-75" : ""
+            } ${viewMode === "list" ? "flex flex-row" : ""}`}
+          >
+            <div className={`relative ${viewMode === "list" ? "w-48 flex-shrink-0" : ""}`}>
+              <div className={`relative overflow-hidden ${viewMode === "list" ? "h-full" : "aspect-square"}`}>
+                <Image
+                  src={product.image || "/placeholder.svg"}
+                  alt={product.name}
+                  fill
+                  className="object-cover group-hover:scale-105 transition-transform duration-300"
+                />
+                {product.isExclusive && (
+                  <Badge className="absolute top-2 left-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white">
+                    <Star className="h-3 w-3 mr-1" />
+                    Exclusive
+                  </Badge>
+                )}
+                {!product.inStock && (
+                  <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                    <Badge variant="destructive" className="gap-1">
+                      <AlertCircle className="h-3 w-3" />
+                      Out of Stock
+                    </Badge>
+                  </div>
+                )}
               </div>
             </div>
 
-            <div className="flex flex-col items-end justify-between">
-              <span className="text-2xl font-bold">${product.price.toFixed(2)}</span>
-              <Button onClick={() => onAddToCart(product)} disabled={!product.inStock} className="mt-4">
-                {product.inStock ? (
-                  <>
-                    <ShoppingCart className="h-4 w-4 mr-2" />
-                    Add to Cart
-                  </>
-                ) : (
-                  "Out of Stock"
-                )}
-              </Button>
+            <div className={`flex flex-col ${viewMode === "list" ? "flex-1" : ""}`}>
+              <CardHeader className={viewMode === "list" ? "pb-2" : ""}>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h3 className="font-semibold text-lg group-hover:text-primary transition-colors">{product.name}</h3>
+                    <Badge variant="outline" className="mt-1 capitalize">
+                      {product.category}
+                    </Badge>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-2xl font-bold text-primary">${product.price.toFixed(2)}</div>
+                  </div>
+                </div>
+              </CardHeader>
+
+              <CardContent className={`flex-1 ${viewMode === "list" ? "py-2" : ""}`}>
+                <p className="text-muted-foreground text-sm leading-relaxed">{product.description}</p>
+              </CardContent>
+
+              <CardFooter className={viewMode === "list" ? "pt-2" : ""}>
+                <Button
+                  onClick={() => handleAddToCart(product)}
+                  disabled={!product.inStock}
+                  className="w-full gap-2"
+                  variant={product.inStock ? "default" : "secondary"}
+                >
+                  <ShoppingCart className="h-4 w-4" />
+                  {product.inStock ? "Add to Cart" : "Out of Stock"}
+                </Button>
+              </CardFooter>
             </div>
+          </Card>
+        ))}
+      </div>
+
+      {/* No Results */}
+      {filteredProducts.length === 0 && (
+        <div className="text-center py-12">
+          <div className="text-muted-foreground mb-4">
+            <ShoppingCart className="h-16 w-16 mx-auto mb-4 opacity-50" />
+            <h3 className="text-lg font-semibold mb-2">No products found</h3>
+            <p>Try adjusting your search or filter criteria.</p>
           </div>
+          <Button
+            onClick={() => {
+              setSearchTerm("")
+              setSelectedCategory("all")
+            }}
+            variant="outline"
+          >
+            Clear Filters
+          </Button>
         </div>
-      </Card>
-    )
-  }
-
-  return (
-    <Card className="group hover:shadow-lg transition-shadow duration-200 overflow-hidden">
-      <CardHeader className="p-0">
-        <div className="relative aspect-square overflow-hidden">
-          <Image
-            src={product.image || "/placeholder.svg"}
-            alt={product.name}
-            fill
-            className="object-cover group-hover:scale-105 transition-transform duration-200"
-            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-          />
-
-          {/* Badges */}
-          <div className="absolute top-3 left-3 flex flex-col gap-1">
-            {product.isExclusive && (
-              <Badge className="bg-yellow-500 text-yellow-900">
-                <Crown className="h-3 w-3 mr-1" />
-                Exclusive
-              </Badge>
-            )}
-          </div>
-
-          {/* Stock overlay */}
-          {!product.inStock && (
-            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-              <Badge variant="destructive" className="text-sm">
-                Out of Stock
-              </Badge>
-            </div>
-          )}
-        </div>
-      </CardHeader>
-
-      <CardContent className="p-4">
-        <h3 className="font-semibold text-lg mb-2 line-clamp-1">{product.name}</h3>
-        <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{product.description}</p>
-
-        <div className="flex items-center justify-between">
-          <span className="text-xl font-bold">${product.price.toFixed(2)}</span>
-          <Badge variant="outline" className="capitalize">
-            {product.category}
-          </Badge>
-        </div>
-      </CardContent>
-
-      <CardFooter className="p-4 pt-0">
-        <Button onClick={() => onAddToCart(product)} disabled={!product.inStock} className="w-full">
-          {product.inStock ? (
-            <>
-              <ShoppingCart className="h-4 w-4 mr-2" />
-              Add to Cart
-            </>
-          ) : (
-            "Out of Stock"
-          )}
-        </Button>
-      </CardFooter>
-    </Card>
+      )}
+    </div>
   )
 }

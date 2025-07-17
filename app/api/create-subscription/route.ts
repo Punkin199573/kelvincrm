@@ -1,9 +1,12 @@
 import { type NextRequest, NextResponse } from "next/server"
 import Stripe from "stripe"
+import { createClient } from "@supabase/supabase-js"
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2024-06-20",
 })
+
+const supabaseAdmin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 
 const tierPriceIds = {
   frost_fan: process.env.STRIPE_FROST_FAN_PRICE_ID!,
@@ -13,9 +16,9 @@ const tierPriceIds = {
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, tier, signup } = await request.json()
+    const { email, tier, fullName, password } = await request.json()
 
-    if (!email || !tier) {
+    if (!email || !tier || !fullName || !password) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
     }
 
@@ -31,9 +34,10 @@ export async function POST(request: NextRequest) {
     } else {
       customer = await stripe.customers.create({
         email: email,
+        name: fullName,
         metadata: {
           tier: tier,
-          signup: signup ? "true" : "false",
+          full_name: fullName,
         },
       })
     }
@@ -52,8 +56,11 @@ export async function POST(request: NextRequest) {
       success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/signup/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/signup`,
       metadata: {
+        type: "subscription",
         tier: tier,
-        signup: signup ? "true" : "false",
+        email: email,
+        full_name: fullName,
+        password: password,
       },
     })
 

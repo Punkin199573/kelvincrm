@@ -3,19 +3,20 @@
 import { useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { loadStripe } from "@stripe/stripe-js"
-import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js"
+import { Elements, useStripe, useElements } from "@stripe/react-stripe-js"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Loader2, CreditCard, Shield, Check } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useCart } from "@/components/store/cart-context"
+import { useAuth } from "@/components/auth/auth-provider"
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
 
 const membershipTiers = {
-  street_rep: { name: "Street Rep", price: 9.99 },
-  warri_elite: { name: "Warri Elite", price: 19.99 },
-  erigma_circle: { name: "Erigma Circle", price: 49.99 },
+  frost_fan: { name: "Frost Fan", price: 9.99 },
+  blizzard_vip: { name: "Blizzard VIP", price: 19.99 },
+  avalanche_backstage: { name: "Avalanche Backstage", price: 49.99 },
 }
 
 function CheckoutForm() {
@@ -28,6 +29,7 @@ function CheckoutForm() {
   const searchParams = useSearchParams()
   const { toast } = useToast()
   const { state: cartState, clearCart } = useCart()
+  const { user } = useAuth()
   const stripe = useStripe()
   const elements = useElements()
 
@@ -46,8 +48,6 @@ function CheckoutForm() {
   }, [searchParams, router, cartState.items.length])
 
   const handleSubscriptionPayment = async () => {
-    if (!stripe || !elements) return
-
     setIsLoading(true)
 
     try {
@@ -86,61 +86,29 @@ function CheckoutForm() {
   }
 
   const handleStorePayment = async () => {
-    if (!stripe || !elements) return
-
     setIsLoading(true)
 
     try {
-      // Create payment intent
-      const response = await fetch("/api/create-payment-intent", {
+      const response = await fetch("/api/create-store-checkout", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          amount: cartState.total,
-          metadata: {
-            user_id: "current_user_id", // This should come from auth
-            items: JSON.stringify(
-              cartState.items.map((item) => ({
-                product_id: item.id,
-                quantity: item.quantity,
-                price: item.price,
-                size: item.size,
-                color: item.color,
-              })),
-            ),
-          },
+          items: cartState.items,
+          userId: user?.id,
+          userEmail: user?.email,
         }),
       })
 
-      const { clientSecret, error } = await response.json()
+      const { url, error } = await response.json()
 
       if (error) {
         throw new Error(error)
       }
 
-      const cardElement = elements.getElement(CardElement)
-      if (!cardElement) return
-
-      const { error: stripeError, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
-        payment_method: {
-          card: cardElement,
-        },
-      })
-
-      if (stripeError) {
-        throw new Error(stripeError.message)
-      }
-
-      if (paymentIntent?.status === "succeeded") {
-        clearCart()
-        toast({
-          title: "Payment Successful! 🎉",
-          description: "Your order has been placed successfully.",
-        })
-        router.push("/dashboard")
-      }
+      // Redirect to Stripe Checkout
+      window.location.href = url
     } catch (error: any) {
       toast({
         title: "Payment Failed",
@@ -168,7 +136,7 @@ function CheckoutForm() {
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 p-4">
       <div className="max-w-2xl mx-auto pt-20">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold bg-gradient-fire dark:bg-gradient-ice bg-clip-text text-transparent mb-2">
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent mb-2">
             {isSubscription ? "Complete Your Membership" : "Complete Your Order"}
           </h1>
           <p className="text-muted-foreground">
@@ -180,9 +148,9 @@ function CheckoutForm() {
 
         <div className="grid md:grid-cols-2 gap-6">
           {/* Order Summary */}
-          <Card className="border-fire-500/20 dark:border-ice-500/20">
+          <Card className="border-primary/20">
             <CardHeader>
-              <CardTitle className="text-fire-600 dark:text-ice-400">Order Summary</CardTitle>
+              <CardTitle className="text-primary">Order Summary</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {isSubscription && selectedTier && (
@@ -249,9 +217,9 @@ function CheckoutForm() {
           </Card>
 
           {/* Payment */}
-          <Card className="border-fire-500/20 dark:border-ice-500/20">
+          <Card className="border-primary/20">
             <CardHeader>
-              <CardTitle className="text-fire-600 dark:text-ice-400">Payment Details</CardTitle>
+              <CardTitle className="text-primary">Payment Details</CardTitle>
               <CardDescription>Secure payment powered by Stripe</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -259,26 +227,6 @@ function CheckoutForm() {
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Email</label>
                   <div className="p-3 bg-muted rounded-lg text-sm">{email}</div>
-                </div>
-              )}
-
-              {isStoreCheckout && (
-                <div className="space-y-4">
-                  <div className="p-4 border rounded-lg">
-                    <CardElement
-                      options={{
-                        style: {
-                          base: {
-                            fontSize: "16px",
-                            color: "#424770",
-                            "::placeholder": {
-                              color: "#aab7c4",
-                            },
-                          },
-                        },
-                      }}
-                    />
-                  </div>
                 </div>
               )}
 
@@ -290,8 +238,8 @@ function CheckoutForm() {
 
                 <Button
                   onClick={isSubscription ? handleSubscriptionPayment : handleStorePayment}
-                  disabled={isLoading || !stripe}
-                  className="w-full bg-gradient-fire dark:bg-gradient-ice hover:opacity-90 transition-opacity"
+                  disabled={isLoading}
+                  className="w-full bg-primary hover:bg-primary/90 transition-colors"
                   size="lg"
                 >
                   {isLoading ? (
@@ -306,11 +254,6 @@ function CheckoutForm() {
                     </>
                   )}
                 </Button>
-
-                <p className="text-xs text-center text-muted-foreground">
-                  By completing this purchase, you agree to our Terms of Service and Privacy Policy.
-                  {isSubscription && " You can cancel your subscription at any time."}
-                </p>
               </div>
             </CardContent>
           </Card>
