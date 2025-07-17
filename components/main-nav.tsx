@@ -1,204 +1,244 @@
 "use client"
 
+import { useState } from "react"
 import Link from "next/link"
-import Image from "next/image"
 import { usePathname } from "next/navigation"
-import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Badge } from "@/components/ui/badge"
-import { ModeToggle } from "@/components/mode-toggle"
-import { MobileNav } from "@/components/mobile-nav"
-import { useAuth } from "@/components/auth/auth-provider"
-import { useCart } from "@/components/store/cart-context"
-import { ShoppingCart, User, LogOut, Settings, Crown } from "lucide-react"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { Menu, User, LogOut, Settings, Crown, ShoppingCart } from "lucide-react"
+import { useAuth } from "@/components/auth/auth-provider"
+import { useCart } from "@/components/store/cart-context"
+import { ModeToggle } from "@/components/mode-toggle"
+import { cn } from "@/lib/utils"
 
-const navigationItems = [
-  { href: "/", label: "Home" },
-  { href: "/content", label: "Content" },
-  { href: "/events", label: "Events" },
-  { href: "/store", label: "Store" },
-  { href: "/meet-and-greet", label: "Meet & Greet" },
+const navigation = [
+  { name: "Home", href: "/" },
+  { name: "Events", href: "/events" },
+  { name: "Store", href: "/store" },
+  { name: "Content", href: "/content" },
+  { name: "Meet & Greet", href: "/meet-and-greet" },
+  { name: "Community", href: "/community" },
 ]
 
 export function MainNav() {
   const pathname = usePathname()
   const { user, profile, signOut } = useAuth()
-  const { state } = useCart()
+  const { items } = useCart()
+  const [isOpen, setIsOpen] = useState(false)
+
+  const cartItemCount = items.reduce((total, item) => total + item.quantity, 0)
+
+  const getTierBadge = (tier: string) => {
+    switch (tier) {
+      case "avalanche_backstage":
+        return (
+          <Badge className="bg-gradient-to-r from-purple-500 to-pink-500 text-white border-0 text-xs">
+            <Crown className="h-3 w-3 mr-1" />
+            Avalanche
+          </Badge>
+        )
+      case "blizzard_vip":
+        return (
+          <Badge className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white border-0 text-xs">
+            <Crown className="h-3 w-3 mr-1" />
+            Blizzard
+          </Badge>
+        )
+      case "frost_fan":
+      default:
+        return (
+          <Badge className="bg-gradient-to-r from-gray-400 to-gray-600 text-white border-0 text-xs">
+            <Crown className="h-3 w-3 mr-1" />
+            Frost
+          </Badge>
+        )
+    }
+  }
 
   const handleSignOut = async () => {
     try {
       await signOut()
+      window.location.href = "/"
     } catch (error) {
       console.error("Error signing out:", error)
     }
   }
 
-  // Safely calculate cart item count
-  const cartItemCount = state?.items?.reduce((sum, item) => sum + (item?.quantity || 0), 0) || 0
-
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-16 items-center justify-between px-4">
-        {/* Mobile Navigation - Left Side */}
-        <div className="flex items-center md:hidden">
-          <MobileNav />
-        </div>
-
-        {/* Logo - Center on Mobile, Left on Desktop */}
-        <Link href="/" className="flex items-center space-x-3 md:mr-6">
-          <div className="relative group">
-            <Image
-              src="/kelvin-logo.png"
-              alt="Kelvin Creekman Logo"
-              width={40}
-              height={40}
-              className="rounded-full border-2 border-electric-500/50 shadow-lg shadow-electric-500/20 transition-all duration-300 group-hover:border-electric-400 group-hover:shadow-electric-400/30"
-              priority
-            />
-            <div className="absolute inset-0 rounded-full border-2 border-electric-500/30 animate-pulse group-hover:border-electric-400/50" />
-          </div>
-          <div className="hidden sm:flex flex-col">
-            <span className="font-bold text-xl bg-gradient-to-r from-electric-400 to-frost-400 bg-clip-text text-transparent leading-tight">
-              Kelvin Creekman
-            </span>
-            <span className="text-xs text-muted-foreground/70 font-medium tracking-wider uppercase">
-              Official Fan Club
-            </span>
-          </div>
+      <div className="container flex h-16 items-center">
+        {/* Logo */}
+        <Link href="/" className="flex items-center space-x-2">
+          <img
+            src="/creekman-logo.png"
+            alt="Kelvin Creekman"
+            className="h-8 w-8 rounded-full"
+            onError={(e) => {
+              const target = e.target as HTMLImageElement
+              target.src = "/placeholder-logo.png"
+            }}
+          />
+          <span className="hidden font-bold sm:inline-block">Kelvin Creekman</span>
         </Link>
 
         {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center space-x-6 text-sm font-medium">
-          {navigationItems.map((item) => (
+        <nav className="hidden md:flex items-center space-x-6 text-sm font-medium ml-6">
+          {navigation.map((item) => (
             <Link
               key={item.href}
               href={item.href}
               className={cn(
-                "transition-colors hover:text-electric-400 relative group py-2",
-                pathname === item.href ? "text-electric-400 frost-text" : "text-muted-foreground",
+                "transition-colors hover:text-foreground/80",
+                pathname === item.href ? "text-foreground" : "text-foreground/60",
               )}
             >
-              {item.label}
-              {pathname === item.href && (
-                <div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-gradient-to-r from-electric-400 to-frost-400 rounded-full" />
-              )}
-              <div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-gradient-to-r from-electric-400 to-frost-400 rounded-full scale-x-0 group-hover:scale-x-100 transition-transform duration-200" />
+              {item.name}
             </Link>
           ))}
         </nav>
 
-        {/* Right Side Actions */}
-        <div className="flex items-center space-x-2 md:space-x-4">
-          {/* Cart Button */}
-          <Button asChild variant="ghost" size="sm" className="relative hover:text-electric-400 transition-colors">
-            <Link href="/store">
+        <div className="flex flex-1 items-center justify-end space-x-4">
+          {/* Cart */}
+          <Link href="/store" className="relative">
+            <Button variant="ghost" size="sm" aria-label="Shopping cart">
               <ShoppingCart className="h-4 w-4" />
               {cartItemCount > 0 && (
-                <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs bg-electric-500 text-white animate-pulse">
+                <Badge className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs">
                   {cartItemCount}
                 </Badge>
               )}
-            </Link>
-          </Button>
+            </Button>
+          </Link>
 
-          {/* Theme Toggle - Desktop Only */}
-          <div className="hidden md:block">
-            <ModeToggle />
-          </div>
+          {/* Theme Toggle */}
+          <ModeToggle />
 
-          {/* User Menu - Desktop */}
-          {user && profile ? (
-            <div className="hidden md:block">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="hover:text-electric-400 transition-colors">
-                    <User className="h-4 w-4 mr-2" />
-                    <span className="max-w-24 truncate">{profile.full_name || user.email?.split("@")[0]}</span>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  align="end"
-                  className="w-56 border-electric-700/30 bg-background/95 backdrop-blur-lg"
-                >
-                  <div className="flex items-center justify-start gap-2 p-2">
-                    <div className="flex flex-col space-y-1 leading-none">
-                      <p className="font-medium">{profile.full_name || "Fan"}</p>
-                      <p className="text-xs text-muted-foreground">{user.email}</p>
-                    </div>
+          {/* User Menu */}
+          {user ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={profile?.avatar_url || ""} alt={profile?.full_name || user.email || ""} />
+                    <AvatarFallback>{profile?.full_name?.charAt(0) || user.email?.charAt(0) || "U"}</AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56" align="end" forceMount>
+                <DropdownMenuLabel className="font-normal">
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-medium leading-none">
+                      {profile?.full_name || user.email?.split("@")[0]}
+                    </p>
+                    <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
+                    {profile?.tier && <div className="pt-1">{getTierBadge(profile.tier)}</div>}
                   </div>
-                  <DropdownMenuSeparator />
-
-                  {profile.membership_tier && (
-                    <>
-                      <DropdownMenuItem disabled>
-                        <Badge className="bg-gold-500/20 text-gold-600 border-gold-500/30">
-                          <Crown className="h-3 w-3 mr-1" />
-                          {profile.membership_tier}
-                        </Badge>
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                    </>
-                  )}
-
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href="/dashboard" className="flex items-center">
+                    <User className="mr-2 h-4 w-4" />
+                    Dashboard
+                  </Link>
+                </DropdownMenuItem>
+                {profile?.is_admin && (
                   <DropdownMenuItem asChild>
-                    <Link href="/dashboard" className="hover:text-electric-400 cursor-pointer">
+                    <Link href="/admin" className="flex items-center">
                       <Settings className="mr-2 h-4 w-4" />
-                      Dashboard
+                      Admin Panel
                     </Link>
                   </DropdownMenuItem>
-
-                  {profile.is_admin && (
-                    <DropdownMenuItem asChild>
-                      <Link href="/admin" className="hover:text-electric-400 cursor-pointer">
-                        <Crown className="mr-2 h-4 w-4" />
-                        Admin Panel
-                      </Link>
-                    </DropdownMenuItem>
-                  )}
-
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleSignOut} className="hover:text-electric-400 cursor-pointer">
-                    <LogOut className="mr-2 h-4 w-4" />
-                    Sign Out
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
+                )}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleSignOut} className="flex items-center">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Sign Out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           ) : (
-            <div className="hidden md:flex items-center space-x-2">
-              <Button variant="ghost" size="sm" asChild className="hover:text-electric-400 transition-colors">
+            <div className="flex items-center space-x-2">
+              <Button variant="ghost" size="sm" asChild>
                 <Link href="/login">Sign In</Link>
               </Button>
-              <Button
-                size="sm"
-                asChild
-                className="bg-gradient-to-r from-electric-400 to-frost-400 hover:from-electric-500 hover:to-frost-500 transition-all"
-              >
-                <Link href="/signup">Join Now</Link>
+              <Button size="sm" asChild>
+                <Link href="/signup">Sign Up</Link>
               </Button>
             </div>
           )}
 
-          {/* Mobile Sign Out Button for Authenticated Users */}
-          {user && (
-            <div className="md:hidden">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleSignOut}
-                className="hover:text-electric-400 transition-colors"
-              >
-                <LogOut className="h-4 w-4" />
+          {/* Mobile Menu */}
+          <Sheet open={isOpen} onOpenChange={setIsOpen}>
+            <SheetTrigger asChild>
+              <Button variant="ghost" className="md:hidden" size="sm" aria-label="Open navigation menu">
+                <Menu className="h-5 w-5" />
               </Button>
-            </div>
-          )}
+            </SheetTrigger>
+            <SheetContent side="right" className="w-[300px] sm:w-[400px]">
+              <nav className="flex flex-col space-y-4">
+                <Link href="/" className="flex items-center space-x-2 pb-4 border-b" onClick={() => setIsOpen(false)}>
+                  <img
+                    src="/creekman-logo.png"
+                    alt="Kelvin Creekman"
+                    className="h-8 w-8 rounded-full"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement
+                      target.src = "/placeholder-logo.png"
+                    }}
+                  />
+                  <span className="font-bold">Kelvin Creekman</span>
+                </Link>
+
+                {navigation.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={cn(
+                      "block px-2 py-1 text-lg transition-colors hover:text-foreground/80",
+                      pathname === item.href ? "text-foreground" : "text-foreground/60",
+                    )}
+                    onClick={() => setIsOpen(false)}
+                  >
+                    {item.name}
+                  </Link>
+                ))}
+
+                {user && (
+                  <>
+                    <div className="border-t pt-4">
+                      <Link href="/dashboard" className="block px-2 py-1 text-lg" onClick={() => setIsOpen(false)}>
+                        Dashboard
+                      </Link>
+                      {profile?.is_admin && (
+                        <Link href="/admin" className="block px-2 py-1 text-lg" onClick={() => setIsOpen(false)}>
+                          Admin Panel
+                        </Link>
+                      )}
+                      <button
+                        onClick={() => {
+                          handleSignOut()
+                          setIsOpen(false)
+                        }}
+                        className="block w-full text-left px-2 py-1 text-lg"
+                      >
+                        Sign Out
+                      </button>
+                    </div>
+                  </>
+                )}
+              </nav>
+            </SheetContent>
+          </Sheet>
         </div>
       </div>
     </header>

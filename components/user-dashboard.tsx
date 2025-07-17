@@ -3,34 +3,13 @@
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Progress } from "@/components/ui/progress"
-import { Separator } from "@/components/ui/separator"
-import {
-  Crown,
-  Calendar,
-  ShoppingBag,
-  Video,
-  Star,
-  Clock,
-  Gift,
-  TrendingUp,
-  Heart,
-  Camera,
-  Save,
-  Loader2,
-  User,
-} from "lucide-react"
+import { Crown, Calendar, ShoppingBag, Video, Star, Clock, Gift, TrendingUp, Heart, Users } from "lucide-react"
 import { useAuth } from "@/components/auth/auth-provider"
 import { supabase } from "@/lib/supabase/client"
-import { useToast } from "@/hooks/use-toast"
-import { UploadButton } from "@uploadthing/react"
-import type { OurFileRouter } from "@/lib/uploadthing"
 import Link from "next/link"
-import Image from "next/image"
 
 interface UserStats {
   totalOrders: number
@@ -49,9 +28,8 @@ interface RecentActivity {
   status?: string
 }
 
-export default function DashboardPage() {
-  const { user, profile, updateProfile } = useAuth()
-  const { toast } = useToast()
+export function UserDashboard() {
+  const { user, profile } = useAuth()
   const [stats, setStats] = useState<UserStats>({
     totalOrders: 0,
     totalSpent: 0,
@@ -62,25 +40,13 @@ export default function DashboardPage() {
   })
   const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([])
   const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [uploading, setUploading] = useState(false)
-  const [profileData, setProfileData] = useState({
-    full_name: "",
-    phone: "",
-    avatar_url: "",
-  })
 
   useEffect(() => {
-    if (user && profile) {
-      setProfileData({
-        full_name: profile.full_name || "",
-        phone: profile.phone || "",
-        avatar_url: profile.avatar_url || "",
-      })
+    if (user) {
       fetchUserStats()
       fetchRecentActivity()
     }
-  }, [user, profile])
+  }, [user])
 
   const fetchUserStats = async () => {
     if (!user) return
@@ -166,34 +132,6 @@ export default function DashboardPage() {
     }
   }
 
-  const handleSaveProfile = async () => {
-    if (!user) return
-
-    setSaving(true)
-    try {
-      const { error } = await updateProfile({
-        full_name: profileData.full_name,
-        phone: profileData.phone,
-        avatar_url: profileData.avatar_url,
-      })
-
-      if (error) throw error
-
-      toast({
-        title: "Success",
-        description: "Profile updated successfully",
-      })
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to update profile",
-        variant: "destructive",
-      })
-    } finally {
-      setSaving(false)
-    }
-  }
-
   const getTierInfo = (tier: string) => {
     switch (tier) {
       case "avalanche_backstage":
@@ -259,32 +197,13 @@ export default function DashboardPage() {
       <div className="max-w-6xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="relative">
-              <div className="w-16 h-16 md:w-20 md:h-20 rounded-full overflow-hidden border-4 border-primary/20 bg-muted">
-                {profileData.avatar_url ? (
-                  <Image
-                    src={profileData.avatar_url || "/placeholder.svg"}
-                    alt="Profile"
-                    width={80}
-                    height={80}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <User className="h-8 w-8 text-muted-foreground" />
-                  </div>
-                )}
-              </div>
-            </div>
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-                Welcome back, {profile?.full_name || user?.email?.split("@")[0]}!
-              </h1>
-              <p className="text-muted-foreground">
-                Member since {stats.memberSince} • {tierInfo.name}
-              </p>
-            </div>
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+              Welcome back, {profile?.full_name || user?.email?.split("@")[0]}!
+            </h1>
+            <p className="text-muted-foreground">
+              Member since {stats.memberSince} • {tierInfo.name}
+            </p>
           </div>
           <div className="flex items-center gap-2">
             <Badge className={`bg-gradient-to-r ${tierInfo.color} text-white border-0`}>
@@ -360,127 +279,13 @@ export default function DashboardPage() {
         )}
 
         {/* Main Content Tabs */}
-        <Tabs defaultValue="profile" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="profile">Profile</TabsTrigger>
+        <Tabs defaultValue="activity" className="space-y-4">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="activity">Activity</TabsTrigger>
             <TabsTrigger value="orders">Orders</TabsTrigger>
             <TabsTrigger value="events">Events</TabsTrigger>
             <TabsTrigger value="content">Content</TabsTrigger>
           </TabsList>
-
-          <TabsContent value="profile" className="space-y-4">
-            <Card className="border-primary/20">
-              <CardHeader>
-                <CardTitle>Profile Settings</CardTitle>
-                <CardDescription>Update your personal information and profile picture</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Profile Picture Upload */}
-                <div className="flex flex-col items-center space-y-4">
-                  <div className="relative">
-                    <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-primary/20 bg-muted">
-                      {profileData.avatar_url ? (
-                        <Image
-                          src={profileData.avatar_url || "/placeholder.svg"}
-                          alt="Profile"
-                          width={96}
-                          height={96}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <User className="h-12 w-12 text-muted-foreground" />
-                        </div>
-                      )}
-                    </div>
-                    <div className="absolute bottom-0 right-0">
-                      <div className="bg-primary rounded-full p-2">
-                        <Camera className="h-4 w-4 text-primary-foreground" />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="text-center">
-                    <UploadButton<OurFileRouter, "imageUploader">
-                      endpoint="imageUploader"
-                      onClientUploadComplete={(res) => {
-                        if (res?.[0]) {
-                          setProfileData((prev) => ({ ...prev, avatar_url: res[0].url }))
-                          toast({
-                            title: "Success",
-                            description: "Profile picture uploaded successfully",
-                          })
-                        }
-                      }}
-                      onUploadError={(error: Error) => {
-                        toast({
-                          title: "Upload Error",
-                          description: error.message,
-                          variant: "destructive",
-                        })
-                      }}
-                      appearance={{
-                        button: "bg-primary hover:bg-primary/90 text-primary-foreground text-sm px-4 py-2",
-                        allowedContent: "text-muted-foreground text-xs",
-                      }}
-                    />
-                  </div>
-                </div>
-
-                <Separator />
-
-                {/* Profile Form */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="full_name">Full Name</Label>
-                    <Input
-                      id="full_name"
-                      value={profileData.full_name}
-                      onChange={(e) => setProfileData((prev) => ({ ...prev, full_name: e.target.value }))}
-                      placeholder="Enter your full name"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input id="email" value={user?.email || ""} disabled className="bg-muted" />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">Phone Number</Label>
-                    <Input
-                      id="phone"
-                      value={profileData.phone}
-                      onChange={(e) => setProfileData((prev) => ({ ...prev, phone: e.target.value }))}
-                      placeholder="Enter your phone number"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="tier">Membership Tier</Label>
-                    <Input id="tier" value={tierInfo.name} disabled className="bg-muted" />
-                  </div>
-                </div>
-
-                <div className="flex justify-end">
-                  <Button onClick={handleSaveProfile} disabled={saving}>
-                    {saving ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Saving...
-                      </>
-                    ) : (
-                      <>
-                        <Save className="h-4 w-4 mr-2" />
-                        Save Changes
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
 
           <TabsContent value="activity" className="space-y-4">
             <Card className="border-primary/20">
@@ -615,11 +420,11 @@ export default function DashboardPage() {
 
           <Card className="border-primary/20 hover:shadow-lg transition-shadow cursor-pointer">
             <CardContent className="p-6 text-center">
-              <Star className="h-12 w-12 mx-auto text-primary mb-4" />
-              <h3 className="font-semibold mb-2">Premium Content</h3>
-              <p className="text-sm text-muted-foreground mb-4">Access exclusive content</p>
+              <Users className="h-12 w-12 mx-auto text-primary mb-4" />
+              <h3 className="font-semibold mb-2">Join Community</h3>
+              <p className="text-sm text-muted-foreground mb-4">Connect with other fans</p>
               <Button asChild size="sm" variant="outline" className="w-full bg-transparent">
-                <Link href="/content">Explore</Link>
+                <Link href="/community">Explore</Link>
               </Button>
             </CardContent>
           </Card>
