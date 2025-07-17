@@ -1,52 +1,51 @@
-import { createUploadthing, type FileRouter } from "uploadthing/next"
-import { supabase } from "@/lib/supabase/client"
-import { createNextRouteHandler } from "uploadthing/next"
+import { createUploadthing, type FileRouter } from "uploadthing/next";
+import { supabase } from "@/lib/supabase/client";
 
-const f = createUploadthing()
+const f = createUploadthing();
 
-export const updatedFileRouter = {
+export const ourFileRouter = {
   profileImage: f({ image: { maxFileSize: "4MB", maxFileCount: 1 } })
-    .middleware(async ({ req }) => {
-      // Add authentication check here
-      return { userId: "user-id" }
+    .middleware(async () => {
+      return { userId: "user-id" }; // Replace with real auth if needed
     })
     .onUploadComplete(async ({ metadata, file }) => {
-      console.log("Profile image upload complete for userId:", metadata.userId)
-      console.log("File URL:", file.url)
+      console.log("Profile image upload complete for userId:", metadata.userId);
+      console.log("File URL:", file.url);
 
-      // Save to database
-      await supabase.from("images").insert({
+      const { error } = await supabase.from("images").insert({
         name: file.name,
         url: file.url,
         category: "profile",
         upload_thing_key: file.key,
         file_size: file.size,
         is_active: true,
-      })
+      });
 
-      return { uploadedBy: metadata.userId }
+      if (error) console.error("Supabase insert error (profileImage):", error);
+
+      return { uploadedBy: metadata.userId, url: file.url };
     }),
 
   websiteImage: f({ image: { maxFileSize: "8MB", maxFileCount: 10 } })
-    .middleware(async ({ req }) => {
-      // Add admin authentication check here
-      return { userId: "admin-user-id" }
+    .middleware(async () => {
+      return { userId: "admin-user-id" }; // Replace with real auth if needed
     })
     .onUploadComplete(async ({ metadata, file }) => {
-      console.log("Website image upload complete for userId:", metadata.userId)
-      console.log("File URL:", file.url)
+      console.log("Website image upload complete for userId:", metadata.userId);
+      console.log("File URL:", file.url);
 
-      // Save to database
-      await supabase.from("images").insert({
+      const { error } = await supabase.from("images").insert({
         name: file.name,
         url: file.url,
         category: "website",
         upload_thing_key: file.key,
         file_size: file.size,
         is_active: true,
-      })
+      });
 
-      return { uploadedBy: metadata.userId }
+      if (error) console.error("Supabase insert error (websiteImage):", error);
+
+      return { uploadedBy: metadata.userId, url: file.url };
     }),
 
   contentMedia: f({
@@ -54,31 +53,26 @@ export const updatedFileRouter = {
     video: { maxFileSize: "64MB", maxFileCount: 3 },
     audio: { maxFileSize: "32MB", maxFileCount: 5 },
   })
-    .middleware(async ({ req }) => {
-      // Add admin authentication check here
-      return { userId: "admin-user-id" }
+    .middleware(async () => {
+      return { userId: "admin-user-id" }; // Replace with real auth if needed
     })
     .onUploadComplete(async ({ metadata, file }) => {
-      console.log("Content media upload complete for userId:", metadata.userId)
-      console.log("File URL:", file.url)
+      console.log("Content media upload complete for userId:", metadata.userId);
+      console.log("File URL:", file.url);
 
-      // Save to database
-      await supabase.from("images").insert({
+      const { error } = await supabase.from("images").insert({
         name: file.name,
         url: file.url,
         category: "content",
         upload_thing_key: file.key,
         file_size: file.size,
         is_active: true,
-      })
+      });
 
-      return { uploadedBy: metadata.userId }
+      if (error) console.error("Supabase insert error (contentMedia):", error);
+
+      return { uploadedBy: metadata.userId, url: file.url };
     }),
-} satisfies FileRouter
+} satisfies FileRouter;
 
-export type UpdatedFileRouter = typeof updatedFileRouter
-
-// Export routes for Next App Router
-export const { GET, POST } = createNextRouteHandler({
-  router: updatedFileRouter,
-})
+export type OurFileRouter = typeof ourFileRouter;
