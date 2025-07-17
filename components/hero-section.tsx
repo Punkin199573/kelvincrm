@@ -5,7 +5,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { ChevronLeft, ChevronRight, Play, Music, Zap, Star, Volume2, VolumeX } from "lucide-react"
-import { SuperFans } from "@/components/super-fans"
+
 
 const heroSlides = [
   {
@@ -91,9 +91,7 @@ export function HeroSection() {
     <section className="relative h-screen w-full overflow-hidden bg-black">
       {/* Background Slides */}
        {/* Super Fans positioned in top right */}
-      <div className="absolute top-4 right-4 z-10 hidden lg:block">
-        <SuperFans />
-      </div>
+      
       <div className="absolute inset-0">
         {heroSlides.map((slide, index) => (
           <div
