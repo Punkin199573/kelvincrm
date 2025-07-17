@@ -10,13 +10,14 @@ const supabaseAdmin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, proces
 
 export async function POST(request: NextRequest) {
   try {
-    const { sessionId, sessionDate, sessionType, contactInfo, specialRequests, price } = await request.json()
+    const { sessionId, sessionDate, sessionTime, sessionType, contactInfo, specialRequests, price, duration } =
+      await request.json()
 
-    if (!sessionId || !sessionDate || !price) {
+    if (!sessionDate || !sessionTime || !price) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
     }
 
-    // Get user from auth header or session
+    // Get user from auth header
     const authHeader = request.headers.get("authorization")
     let userId = null
 
@@ -40,8 +41,8 @@ export async function POST(request: NextRequest) {
           price_data: {
             currency: "usd",
             product_data: {
-              name: `Meet & Greet Session - ${sessionType}`,
-              description: `Video session scheduled for ${new Date(sessionDate).toLocaleString()}`,
+              name: `Private Video Session with Kelvin Creekman`,
+              description: `${duration}-minute private video call scheduled for ${new Date(sessionDate).toLocaleDateString()} at ${sessionTime}`,
             },
             unit_amount: Math.round(price * 100),
           },
@@ -54,11 +55,13 @@ export async function POST(request: NextRequest) {
       metadata: {
         type: "session_booking",
         userId,
-        sessionId,
+        sessionId: sessionId || `session_${Date.now()}`,
         sessionDate,
-        sessionType,
+        sessionTime,
+        sessionType: sessionType || "Private Video Call",
         contactInfo: JSON.stringify(contactInfo),
         specialRequests: specialRequests || "",
+        duration: duration?.toString() || "30",
       },
       customer_email: contactInfo.email,
     })

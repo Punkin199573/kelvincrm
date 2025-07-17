@@ -180,7 +180,10 @@ async function handleSessionBooking(session: Stripe.Checkout.Session, supabase: 
   const userId = session.metadata?.userId
   const sessionDate = session.metadata?.sessionDate
   const sessionTime = session.metadata?.sessionTime
-  const platform = session.metadata?.platform
+  const sessionType = session.metadata?.sessionType
+  const contactInfo = JSON.parse(session.metadata?.contactInfo || "{}")
+  const specialRequests = session.metadata?.specialRequests
+  const duration = Number.parseInt(session.metadata?.duration || "30")
 
   if (!userId || !sessionDate || !sessionTime) {
     console.error("Missing session booking metadata")
@@ -192,12 +195,16 @@ async function handleSessionBooking(session: Stripe.Checkout.Session, supabase: 
     .from("session_bookings")
     .insert({
       user_id: userId,
+      session_type: sessionType || "Private Video Call",
       session_date: sessionDate,
       session_time: sessionTime,
-      platform: platform || "zoom",
+      duration_minutes: duration,
+      platform: "signal",
       status: "confirmed",
       stripe_session_id: session.id,
       amount_paid: session.amount_total! / 100,
+      contact_info: contactInfo,
+      special_requests: specialRequests,
     })
     .select()
     .single()
@@ -212,12 +219,15 @@ async function handleSessionBooking(session: Stripe.Checkout.Session, supabase: 
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      userId,
-      bookingId: booking.id,
-      email: session.customer_details?.email,
-      sessionDate,
-      sessionTime,
-      platform,
+      userName: contactInfo.name || "Valued Customer",
+      userEmail: contactInfo.email || session.customer_details?.email,
+      sessionDate: new Date(sessionDate).toLocaleDateString(),
+      sessionTime: sessionTime,
+      sessionType: sessionType || "Private Video Call",
+      sessionDuration: `${duration} minutes`,
+      sessionPrice: `$${(session.amount_total! / 100).toFixed(2)}`,
+      contactInfo: contactInfo.email || session.customer_details?.email,
+      specialRequests: specialRequests,
     }),
   })
 

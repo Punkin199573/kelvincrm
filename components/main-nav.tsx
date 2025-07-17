@@ -18,7 +18,6 @@ import {
 import { Menu, User, LogOut, Settings, Crown, ShoppingCart } from "lucide-react"
 import { useAuth } from "@/components/auth/auth-provider"
 import { useCart } from "@/components/store/cart-context"
-import { ModeToggle } from "@/components/mode-toggle"
 import { cn } from "@/lib/utils"
 
 const navigation = [
@@ -121,7 +120,7 @@ export function MainNav() {
           </Link>
 
           {/* Theme Toggle */}
-          <ModeToggle />
+          {/* Theme Toggle component is removed in updates, so it's not included here */}
 
           {/* User Menu */}
           {user ? (
