@@ -90,7 +90,7 @@ export function HeroSection() {
   return (
     <section className="relative h-screen w-full overflow-hidden bg-black">
       {/* Background Slides */}
-      {/* Super Fans positioned in top right */}
+       {/* Super Fans positioned in top right */}
       <div className="absolute top-4 right-4 z-10 hidden lg:block">
         <SuperFans />
       </div>
@@ -212,7 +212,7 @@ export function HeroSection() {
                     size="lg"
                     className="border-2 border-fire-400/70 text-fire-200 hover:bg-fire-500/20 hover:border-fire-300 dark:border-electric-400/70 dark:text-electric-200 dark:hover:bg-electric-500/20 dark:hover:border-electric-300 text-xl px-10 py-8 rounded-full bg-black/30 backdrop-blur-sm transition-all duration-300 hover:scale-105"
                   >
-                    <Link href="/signup" className="flex items-center gap-3">
+                    <Link href="/join" className="flex items-center gap-3">
                       Join Fan Club
                       <Star className="h-6 w-6" />
                     </Link>
