@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js"
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
+// Client-side Supabase client
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 // TypeScript types for database tables
@@ -167,11 +168,12 @@ export type Image = {
   id: string
   name: string
   url: string
-  category: string
+  category: "profile" | "website" | "content" | "product" | "general"
   alt_text: string | null
   file_size: number | null
   dimensions: any
   upload_thing_key: string | null
+  user_id: string | null
   is_active: boolean
   created_at: string
   updated_at: string
