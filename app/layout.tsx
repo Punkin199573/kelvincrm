@@ -8,6 +8,7 @@ import { CartProvider } from "@/components/store/cart-context"
 import { Toaster } from "@/components/ui/toaster"
 import { MainNav } from "@/components/main-nav"
 import { SiteFooter } from "@/components/site-footer"
+import { MobileFooterNav } from "@/components/mobile-footer-nav"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -30,8 +31,9 @@ export default function RootLayout({
             <CartProvider>
               <div className="relative flex min-h-screen flex-col">
                 <MainNav />
-                <main className="flex-1">{children}</main>
+                <main className="flex-1 pb-20 md:pb-0">{children}</main>
                 <SiteFooter />
+                <MobileFooterNav />
               </div>
               <Toaster />
             </CartProvider>

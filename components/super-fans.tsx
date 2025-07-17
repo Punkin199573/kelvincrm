@@ -1,120 +1,157 @@
 "use client"
 
-import { Card, CardContent } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Instagram, Music, ExternalLink, Sparkles, Heart } from "lucide-react"
-import { motion } from "framer-motion"
+import { Crown, Star, ExternalLink } from "lucide-react"
+import Image from "next/image"
+
+const superFans = [
+  {
+    name: "THERESA RUSSELL",
+    avatar: "/placeholder-user.jpg",
+    tier: "Avalanche Backstage",
+    joinDate: "2023",
+    socialLinks: [
+      {
+        platform: "Instagram",
+        url: "https://www.instagram.com/theresa4kelvin?igsh=MWdlNnFtaHQyMjBxbA==",
+        icon: "📷",
+      },
+    ],
+  },
+  {
+    name: "Martha Bernie",
+    avatar: "/placeholder-user.jpg",
+    tier: "Blizzard VIP",
+    joinDate: "2023",
+    socialLinks: [
+      {
+        platform: "TikTok",
+        url: "https://www.tiktok.com/@martha_bernie?_t=ZM-8y3uUlt2V2D&_r=1",
+        icon: "🎵",
+      },
+    ],
+  },
+  {
+    name: "Manja",
+    avatar: "/placeholder-user.jpg",
+    tier: "Frost Fan",
+    joinDate: "2024",
+    socialLinks: [
+      {
+        platform: "TikTok",
+        url: "https://www.tiktok.com/@lk_larr_?_t=ZS-8xyuzCdnwMk&_r=1",
+        icon: "🎵",
+      },
+    ],
+  },
+]
 
 export function SuperFans() {
-  const handleTikTokClick = () => {
-    window.open("https://www.tiktok.com/@kelvincrm", "_blank", "noopener,noreferrer")
-  }
-
-  const handleInstagramClick = () => {
-    window.open("https://www.instagram.com/kelvincrm", "_blank", "noopener,noreferrer")
-  }
-
   return (
-    <div className="fixed bottom-6 right-6 z-50">
-      <motion.div
-        initial={{ scale: 0, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{
-          type: "spring",
-          stiffness: 260,
-          damping: 20,
-          delay: 0.5,
-        }}
-        whileHover={{ scale: 1.05 }}
-        className="relative"
-      >
-        {/* Animated background glow */}
-        <motion.div
-          className="absolute inset-0 rounded-2xl bg-gradient-to-r from-fire-500/20 via-electric-500/20 to-ice-500/20 blur-xl"
-          animate={{
-            scale: [1, 1.1, 1],
-            opacity: [0.5, 0.8, 0.5],
-          }}
-          transition={{
-            duration: 3,
-            repeat: Number.POSITIVE_INFINITY,
-            ease: "easeInOut",
-          }}
-        />
+    <section className="py-16 px-4 bg-gradient-to-br from-background via-background to-muted/20">
+      <div className="max-w-6xl mx-auto">
+        <div className="text-center mb-12">
+          <div className="flex items-center justify-center gap-2 mb-4">
+            <Crown className="h-8 w-8 text-gold-500" />
+            <h2 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-gold-400 to-gold-600 bg-clip-text text-transparent">
+              Super Fans
+            </h2>
+            <Crown className="h-8 w-8 text-gold-500" />
+          </div>
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            Meet our most dedicated fans who've been with Kelvin from the beginning. These amazing supporters help make
+            our community special!
+          </p>
+        </div>
 
-        <Card className="relative w-80 bg-gradient-to-br from-slate-900/95 via-slate-800/95 to-slate-900/95 backdrop-blur-sm border-fire-500/30 shadow-2xl">
-          <CardContent className="p-6">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 8, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
-                >
-                  <Sparkles className="h-5 w-5 text-electric-400" />
-                </motion.div>
-                <h3 className="font-bold text-white">Super Fans</h3>
-              </div>
-              <Badge className="bg-fire-500/20 text-fire-300 border-fire-500/30 animate-pulse">
-                <Heart className="h-3 w-3 mr-1" />
-                VIP
-              </Badge>
-            </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {superFans.map((fan, index) => (
+            <Card
+              key={fan.name}
+              className="group hover:shadow-xl transition-all duration-300 border-gold-500/20 bg-gradient-to-br from-card via-card to-gold-500/5"
+            >
+              <CardHeader className="text-center pb-4">
+                <div className="relative mx-auto mb-4">
+                  <div className="w-20 h-20 rounded-full overflow-hidden border-4 border-gold-500/30 shadow-lg">
+                    <Image
+                      src={fan.avatar || "/placeholder.svg"}
+                      alt={fan.name}
+                      width={80}
+                      height={80}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div className="absolute -top-2 -right-2">
+                    <Badge className="bg-gold-500 text-white border-gold-600">
+                      <Star className="h-3 w-3 mr-1" />#{index + 1}
+                    </Badge>
+                  </div>
+                </div>
+                <CardTitle className="text-xl font-bold text-gold-600 dark:text-gold-400">{fan.name}</CardTitle>
+                <CardDescription className="text-sm">
+                  <Badge variant="outline" className="border-gold-500/50 text-gold-600 dark:text-gold-400">
+                    {fan.tier}
+                  </Badge>
+                </CardDescription>
+              </CardHeader>
 
-            {/* Content */}
-            <div className="space-y-4">
-              <p className="text-slate-300 text-sm leading-relaxed">
-                Join the exclusive community of Kelvin Creekman's biggest supporters! Get behind-the-scenes content,
-                early access to new music, and connect directly with Kelvin.
+              <CardContent className="text-center space-y-4">
+                <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                  <Crown className="h-4 w-4 text-gold-500" />
+                  <span>Fan since {fan.joinDate}</span>
+                </div>
+
+                {/* Social Links */}
+                <div className="flex justify-center gap-2">
+                  {fan.socialLinks.map((social, socialIndex) => (
+                    <Button
+                      key={socialIndex}
+                      asChild
+                      variant="outline"
+                      size="sm"
+                      className="border-gold-500/30 hover:border-gold-500 hover:bg-gold-500/10 transition-colors bg-transparent"
+                    >
+                      <a
+                        href={social.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2"
+                      >
+                        <span>{social.icon}</span>
+                        <span>{social.platform}</span>
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
+                    </Button>
+                  ))}
+                </div>
+
+                <div className="pt-2 border-t border-gold-500/20">
+                  <p className="text-xs text-muted-foreground italic">
+                    "Thank you for being an amazing part of our community! 🎸"
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        <div className="text-center mt-12">
+          <Card className="max-w-md mx-auto border-gold-500/20 bg-gradient-to-br from-card to-gold-500/5">
+            <CardContent className="p-6">
+              <Crown className="h-12 w-12 text-gold-500 mx-auto mb-4" />
+              <h3 className="text-xl font-bold text-gold-600 dark:text-gold-400 mb-2">Want to be featured?</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Join our highest tier membership and become part of our Super Fans community!
               </p>
-
-              {/* Social Media Buttons */}
-              <div className="grid grid-cols-2 gap-3">
-                <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                  <Button
-                    onClick={handleTikTokClick}
-                    className="w-full bg-gradient-to-r from-pink-600 to-red-600 hover:from-pink-700 hover:to-red-700 text-white border-0 shadow-lg"
-                    size="sm"
-                  >
-                    <Music className="h-4 w-4 mr-2" />
-                    TikTok
-                    <ExternalLink className="h-3 w-3 ml-2" />
-                  </Button>
-                </motion.div>
-
-                <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                  <Button
-                    onClick={handleInstagramClick}
-                    className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white border-0 shadow-lg"
-                    size="sm"
-                  >
-                    <Instagram className="h-4 w-4 mr-2" />
-                    Instagram
-                    <ExternalLink className="h-3 w-3 ml-2" />
-                  </Button>
-                </motion.div>
-              </div>
-
-              {/* Features */}
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-xs text-slate-400">
-                  <div className="w-1.5 h-1.5 bg-electric-400 rounded-full animate-pulse" />
-                  Exclusive behind-the-scenes content
-                </div>
-                <div className="flex items-center gap-2 text-xs text-slate-400">
-                  <div className="w-1.5 h-1.5 bg-fire-400 rounded-full animate-pulse" />
-                  Early access to new releases
-                </div>
-                <div className="flex items-center gap-2 text-xs text-slate-400">
-                  <div className="w-1.5 h-1.5 bg-ice-400 rounded-full animate-pulse" />
-                  Direct interaction with Kelvin
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
-    </div>
+              <Button className="bg-gradient-to-r from-gold-400 to-gold-600 hover:from-gold-500 hover:to-gold-700 text-white">
+                Upgrade Membership
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </section>
   )
 }
