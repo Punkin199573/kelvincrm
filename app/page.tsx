@@ -13,7 +13,7 @@ export default function HomePage() {
       <UpcomingEvents />
       <FeaturedMerchandise />
       <Testimonials />
-      <SuperFansWidget />
+     
     </div>
   )
 }
