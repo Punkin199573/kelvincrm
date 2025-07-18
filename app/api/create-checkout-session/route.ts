@@ -7,7 +7,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 // Validate currency and provide fallback
 const validateCurrency = (currency?: string): string => {
-  const validCurrencies = ["usd", "eur", "gbp", "cad", "aud", "jpy"]
+  const validCurrencies = ["usd", "eur", "gbp", "cad", "aud"]
 
   if (!currency || typeof currency !== "string") {
     return "usd"
@@ -17,18 +17,18 @@ const validateCurrency = (currency?: string): string => {
   return validCurrencies.includes(normalizedCurrency) ? normalizedCurrency : "usd"
 }
 
-// Validate price amount
-const validateAmount = (amount?: number): number => {
-  if (typeof amount !== "number" || isNaN(amount) || amount <= 0) {
-    return 999 // Default fallback amount in cents
-  }
-  return Math.round(amount * 100) // Convert to cents
-}
-
-// Membership tier pricing
+// Membership tier configurations
 const membershipTiers = {
-  frost_fan: { name: "Frost Fan", price: 9.99, priceId: process.env.STRIPE_FROST_FAN_PRICE_ID },
-  blizzard_vip: { name: "Blizzard VIP", price: 19.99, priceId: process.env.STRIPE_BLIZZARD_VIP_PRICE_ID },
+  frost_fan: {
+    name: "Frost Fan",
+    price: 9.99,
+    priceId: process.env.STRIPE_FROST_FAN_PRICE_ID,
+  },
+  blizzard_vip: {
+    name: "Blizzard VIP",
+    price: 19.99,
+    priceId: process.env.STRIPE_BLIZZARD_VIP_PRICE_ID,
+  },
   avalanche_backstage: {
     name: "Avalanche Backstage",
     price: 49.99,
@@ -43,74 +43,77 @@ export async function POST(request: NextRequest) {
 
     // Validate required fields
     if (!tier || !email) {
-      return NextResponse.json({ error: "Missing required fields: tier and email are required" }, { status: 400 })
+      return NextResponse.json({ error: "Missing required fields: tier and email" }, { status: 400 })
     }
 
     // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(email)) {
+    if (!email.includes("@") || !email.includes(".")) {
       return NextResponse.json({ error: "Invalid email format" }, { status: 400 })
     }
 
     // Validate tier
-    const tierData = membershipTiers[tier as keyof typeof membershipTiers]
-    if (!tierData) {
+    const selectedTier = membershipTiers[tier as keyof typeof membershipTiers]
+    if (!selectedTier) {
       return NextResponse.json({ error: "Invalid membership tier" }, { status: 400 })
     }
 
     // Validate currency
     const validatedCurrency = validateCurrency(requestCurrency)
 
-    // Validate amount
-    const amount = validateAmount(tierData.price)
-
-    // Prepare session metadata
+    // Prepare metadata
     const metadata: Record<string, string> = {
-      type: isSignup ? "subscription_signup" : "subscription",
-      tier: tier,
-      email: email,
+      type: "subscription",
+      tier,
+      email,
       isSignup: isSignup ? "true" : "false",
+      currency: validatedCurrency,
     }
 
     if (userId) {
       metadata.userId = userId
     }
 
-    // Create line items
-    const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [
-      {
-        price_data: {
-          currency: validatedCurrency,
-          product_data: {
-            name: `${tierData.name} Membership`,
-            description: `Monthly subscription to Kelvin Creekman Fan Club - ${tierData.name} tier`,
-            images: [`${process.env.NEXT_PUBLIC_BASE_URL}/kelvin-logo.png`],
-          },
-          unit_amount: amount,
-          recurring: {
-            interval: "month",
-          },
-        },
-        quantity: 1,
-      },
-    ]
-
-    // Prepare session parameters
+    // Create checkout session parameters
     const sessionParams: Stripe.Checkout.SessionCreateParams = {
       payment_method_types: ["card"],
-      line_items: lineItems,
       mode: "subscription",
+      customer_email: email,
+      metadata: metadata,
       success_url:
         successUrl ||
         `${process.env.NEXT_PUBLIC_BASE_URL}/signup/success?session_id={CHECKOUT_SESSION_ID}&tier=${tier}`,
-      cancel_url: cancelUrl || `${process.env.NEXT_PUBLIC_BASE_URL}/signup?cancelled=true`,
-      customer_email: email,
-      metadata: metadata,
+      cancel_url:
+        cancelUrl ||
+        `${process.env.NEXT_PUBLIC_BASE_URL}/checkout?tier=${tier}&email=${encodeURIComponent(email)}&signup=${isSignup}&cancelled=true`,
       allow_promotion_codes: true,
       billing_address_collection: "required",
-      subscription_data: {
-        metadata: metadata,
-      },
+    }
+
+    // Use price ID if available, otherwise create price data
+    if (selectedTier.priceId) {
+      sessionParams.line_items = [
+        {
+          price: selectedTier.priceId,
+          quantity: 1,
+        },
+      ]
+    } else {
+      sessionParams.line_items = [
+        {
+          price_data: {
+            currency: validatedCurrency,
+            product_data: {
+              name: `${selectedTier.name} Membership`,
+              description: `Monthly subscription to Kelvin Creekman ${selectedTier.name} tier`,
+            },
+            unit_amount: Math.round(selectedTier.price * 100),
+            recurring: {
+              interval: "month",
+            },
+          },
+          quantity: 1,
+        },
+      ]
     }
 
     // Create the checkout session
@@ -124,19 +127,16 @@ export async function POST(request: NextRequest) {
       url: session.url,
       sessionId: session.id,
       currency: validatedCurrency,
-      amount: amount / 100, // Return amount in dollars
+      amount: selectedTier.price,
     })
   } catch (error: any) {
     console.error("Error creating checkout session:", error)
 
-    // Return appropriate error message
     let errorMessage = "Failed to create checkout session"
-    if (error.message?.includes("No such price")) {
-      errorMessage = "Invalid pricing configuration"
-    } else if (error.message?.includes("Invalid currency")) {
-      errorMessage = "Invalid currency specified"
-    } else if (error.message) {
+    if (error.message?.includes("Invalid")) {
       errorMessage = error.message
+    } else if (error.message?.includes("No such")) {
+      errorMessage = "Invalid subscription configuration"
     }
 
     return NextResponse.json({ error: errorMessage }, { status: 500 })
