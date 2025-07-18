@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -14,33 +14,47 @@ const tierIcons = {
   frost_fan: Star,
   blizzard_vip: Zap,
   avalanche_backstage: Crown,
-}
+} as const
 
 const tierColors = {
   frost_fan: "bg-blue-500",
   blizzard_vip: "bg-purple-500",
   avalanche_backstage: "bg-yellow-500",
-}
+} as const
 
 const tierNames = {
   frost_fan: "Frost Fan",
   blizzard_vip: "Blizzard VIP",
   avalanche_backstage: "Avalanche Backstage",
-}
+} as const
 
 export default function DashboardPage() {
   const { user, profile, loading, signOut } = useAuth()
   const [isSigningOut, setIsSigningOut] = useState(false)
+  const [redirecting, setRedirecting] = useState(false)
   const router = useRouter()
 
+  // Memoize tier info to prevent unnecessary recalculations
+  const tierInfo = useMemo(() => {
+    const userTier = profile?.tier || "frost_fan"
+    const TierIcon = tierIcons[userTier as keyof typeof tierIcons] || Star
+    const tierColor = tierColors[userTier as keyof typeof tierColors] || "bg-blue-500"
+    const tierName = tierNames[userTier as keyof typeof tierNames] || "Frost Fan"
+
+    return { userTier, TierIcon, tierColor, tierName }
+  }, [profile?.tier])
+
   useEffect(() => {
-    // Redirect to login if not authenticated and not loading
-    if (!loading && !user) {
+    // Only redirect if we're not loading and there's no user
+    if (!loading && !user && !redirecting) {
+      setRedirecting(true)
       router.replace("/login")
     }
-  }, [user, loading, router])
+  }, [user, loading, router, redirecting])
 
   const handleSignOut = async () => {
+    if (isSigningOut) return
+
     setIsSigningOut(true)
     try {
       await signOut()
@@ -52,7 +66,7 @@ export default function DashboardPage() {
     }
   }
 
-  // Show loading state
+  // Show loading state while auth is initializing
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -64,7 +78,7 @@ export default function DashboardPage() {
     )
   }
 
-  // Show login redirect if not authenticated
+  // Show redirect state if not authenticated
   if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -76,10 +90,7 @@ export default function DashboardPage() {
     )
   }
 
-  const userTier = profile?.tier || "frost_fan"
-  const TierIcon = tierIcons[userTier as keyof typeof tierIcons] || Star
-  const tierColor = tierColors[userTier as keyof typeof tierColors] || "bg-blue-500"
-  const tierName = tierNames[userTier as keyof typeof tierNames] || "Frost Fan"
+  const { TierIcon, tierColor, tierName } = tierInfo
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">

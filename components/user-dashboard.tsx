@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -27,8 +27,60 @@ export function UserDashboard() {
   const { user, profile } = useAuth()
   const [membershipProgress, setMembershipProgress] = useState(0)
 
+  // Memoize tier info to prevent recalculations
+  const tierInfo = useMemo(() => {
+    const getTierInfo = (tier: string) => {
+      switch (tier) {
+        case "avalanche_backstage":
+          return {
+            name: "Avalanche Backstage",
+            color: "from-yellow-500 to-orange-500",
+            icon: Crown,
+            benefits: ["Weekly 1-on-1 calls", "Signed merchandise", "Concert presales", "Personal requests"],
+          }
+        case "blizzard_vip":
+          return {
+            name: "Blizzard VIP",
+            color: "from-purple-500 to-blue-500",
+            icon: Star,
+            benefits: ["Monthly video calls", "Exclusive discounts", "Behind-the-scenes", "Priority support"],
+          }
+        case "frost_fan":
+        default:
+          return {
+            name: "Frost Fan",
+            color: "from-blue-400 to-cyan-500",
+            icon: Heart,
+            benefits: ["Monthly content", "Community access", "Early releases", "Digital downloads"],
+          }
+      }
+    }
+    return getTierInfo(profile?.tier || "frost_fan")
+  }, [profile?.tier])
+
+  // Memoize static data to prevent unnecessary re-renders
+  const staticData = useMemo(
+    () => ({
+      recentActivity: [
+        { type: "content", title: "New song preview released", date: "2 days ago", icon: Music },
+        { type: "event", title: "Virtual meet & greet booked", date: "1 week ago", icon: Video },
+        { type: "purchase", title: "Limited edition t-shirt ordered", date: "2 weeks ago", icon: ShoppingBag },
+      ],
+      upcomingEvents: [
+        { title: "Monthly Fan Q&A", date: "Dec 15, 2024", time: "7:00 PM EST", type: "Virtual" },
+        { title: "Exclusive Listening Party", date: "Dec 22, 2024", time: "8:00 PM EST", type: "Virtual" },
+      ],
+      exclusiveContent: [
+        { title: "Behind the Scenes: Studio Session", type: "Video", duration: "12:34", thumbnail: "/placeholder.svg" },
+        { title: "Acoustic Version - Winter Dreams", type: "Audio", duration: "3:45", thumbnail: "/placeholder.svg" },
+        { title: "Fan Letter Response #47", type: "Video", duration: "5:21", thumbnail: "/placeholder.svg" },
+      ],
+    }),
+    [],
+  )
+
+  // Calculate membership progress only when profile changes
   useEffect(() => {
-    // Simulate membership progress calculation
     if (profile?.created_at) {
       const createdDate = new Date(profile.created_at)
       const now = new Date()
@@ -36,55 +88,20 @@ export function UserDashboard() {
       const progress = Math.min((daysSinceJoined / 30) * 100, 100) // 30 days for full progress
       setMembershipProgress(progress)
     }
-  }, [profile])
+  }, [profile?.created_at])
 
-  const getTierInfo = (tier: string) => {
-    switch (tier) {
-      case "avalanche_backstage":
-        return {
-          name: "Avalanche Backstage",
-          color: "from-yellow-500 to-orange-500",
-          icon: Crown,
-          benefits: ["Weekly 1-on-1 calls", "Signed merchandise", "Concert presales", "Personal requests"],
-        }
-      case "blizzard_vip":
-        return {
-          name: "Blizzard VIP",
-          color: "from-purple-500 to-blue-500",
-          icon: Star,
-          benefits: ["Monthly video calls", "Exclusive discounts", "Behind-the-scenes", "Priority support"],
-        }
-      case "frost_fan":
-      default:
-        return {
-          name: "Frost Fan",
-          color: "from-blue-400 to-cyan-500",
-          icon: Heart,
-          benefits: ["Monthly content", "Community access", "Early releases", "Digital downloads"],
-        }
+  // Memoize user initials to prevent recalculation
+  const userInitials = useMemo(() => {
+    if (profile?.full_name) {
+      return profile.full_name
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
     }
-  }
+    return user?.email?.[0].toUpperCase() || "U"
+  }, [profile?.full_name, user?.email])
 
-  const tierInfo = getTierInfo(profile?.tier || "frost_fan")
   const TierIcon = tierInfo.icon
-
-  // Mock data for demonstration
-  const recentActivity = [
-    { type: "content", title: "New song preview released", date: "2 days ago", icon: Music },
-    { type: "event", title: "Virtual meet & greet booked", date: "1 week ago", icon: Video },
-    { type: "purchase", title: "Limited edition t-shirt ordered", date: "2 weeks ago", icon: ShoppingBag },
-  ]
-
-  const upcomingEvents = [
-    { title: "Monthly Fan Q&A", date: "Dec 15, 2024", time: "7:00 PM EST", type: "Virtual" },
-    { title: "Exclusive Listening Party", date: "Dec 22, 2024", time: "8:00 PM EST", type: "Virtual" },
-  ]
-
-  const exclusiveContent = [
-    { title: "Behind the Scenes: Studio Session", type: "Video", duration: "12:34", thumbnail: "/placeholder.svg" },
-    { title: "Acoustic Version - Winter Dreams", type: "Audio", duration: "3:45", thumbnail: "/placeholder.svg" },
-    { title: "Fan Letter Response #47", type: "Video", duration: "5:21", thumbnail: "/placeholder.svg" },
-  ]
 
   return (
     <div className="space-y-6">
@@ -93,12 +110,7 @@ export function UserDashboard() {
         <div className="flex items-center gap-4">
           <Avatar className="h-16 w-16">
             <AvatarImage src="/placeholder-user.jpg" alt={profile?.full_name || "User"} />
-            <AvatarFallback className="text-lg">
-              {profile?.full_name
-                ?.split(" ")
-                .map((n) => n[0])
-                .join("") || user?.email?.[0].toUpperCase()}
-            </AvatarFallback>
+            <AvatarFallback className="text-lg">{userInitials}</AvatarFallback>
           </Avatar>
           <div className="flex-1">
             <h1 className="text-2xl font-bold">Welcome back, {profile?.full_name || user?.email?.split("@")[0]}!</h1>
@@ -184,7 +196,7 @@ export function UserDashboard() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {recentActivity.map((activity, index) => {
+                {staticData.recentActivity.map((activity, index) => {
                   const ActivityIcon = activity.icon
                   return (
                     <div key={index} className="flex items-center gap-3">
@@ -210,7 +222,7 @@ export function UserDashboard() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {upcomingEvents.map((event, index) => (
+                {staticData.upcomingEvents.map((event, index) => (
                   <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
                     <div className="flex items-center gap-3">
                       <Calendar className="h-4 w-4 text-primary" />
@@ -240,7 +252,7 @@ export function UserDashboard() {
             </CardHeader>
             <CardContent>
               <div className="grid gap-4 md:grid-cols-2">
-                {exclusiveContent.map((content, index) => (
+                {staticData.exclusiveContent.map((content, index) => (
                   <div
                     key={index}
                     className="flex items-center gap-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors"
@@ -284,7 +296,7 @@ export function UserDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {upcomingEvents.map((event, index) => (
+                  {staticData.upcomingEvents.map((event, index) => (
                     <div key={index} className="p-3 border rounded-lg">
                       <h3 className="font-medium">{event.title}</h3>
                       <p className="text-sm text-muted-foreground">

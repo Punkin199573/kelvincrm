@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { createContext, useContext, useEffect, useState } from "react"
+import { createContext, useContext, useEffect, useState, useCallback } from "react"
 import type { User } from "@supabase/supabase-js"
 import { supabase } from "@/lib/supabase/client"
 import { useToast } from "@/hooks/use-toast"
@@ -28,58 +28,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
+  const [initialized, setInitialized] = useState(false)
   const { toast } = useToast()
 
-  useEffect(() => {
-    // Get initial session
-    const getInitialSession = async () => {
-      try {
-        const {
-          data: { session },
-          error,
-        } = await supabase.auth.getSession()
-
-        if (error) {
-          console.error("Error getting session:", error)
-          setLoading(false)
-          return
-        }
-
-        setUser(session?.user ?? null)
-
-        if (session?.user) {
-          await fetchProfile(session.user.id)
-        } else {
-          setLoading(false)
-        }
-      } catch (error) {
-        console.error("Error in getInitialSession:", error)
-        setLoading(false)
-      }
-    }
-
-    getInitialSession()
-
-    // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log("Auth state changed:", event, session?.user?.email)
-
-      setUser(session?.user ?? null)
-
-      if (session?.user) {
-        await fetchProfile(session.user.id)
-      } else {
-        setProfile(null)
-        setLoading(false)
-      }
-    })
-
-    return () => subscription.unsubscribe()
-  }, [])
-
-  const fetchProfile = async (userId: string) => {
+  const fetchProfile = useCallback(async (userId: string) => {
     try {
       const { data, error } = await supabase.from("profiles").select("*").eq("id", userId).single()
 
@@ -97,10 +49,80 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error("Unexpected error fetching profile:", error)
       setProfile(null)
-    } finally {
-      setLoading(false)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    let mounted = true
+
+    const initializeAuth = async () => {
+      try {
+        // Get initial session
+        const {
+          data: { session },
+          error,
+        } = await supabase.auth.getSession()
+
+        if (!mounted) return
+
+        if (error) {
+          console.error("Error getting session:", error)
+          setUser(null)
+          setProfile(null)
+          setLoading(false)
+          setInitialized(true)
+          return
+        }
+
+        setUser(session?.user ?? null)
+
+        if (session?.user) {
+          await fetchProfile(session.user.id)
+        }
+
+        setLoading(false)
+        setInitialized(true)
+      } catch (error) {
+        console.error("Error in initializeAuth:", error)
+        if (mounted) {
+          setUser(null)
+          setProfile(null)
+          setLoading(false)
+          setInitialized(true)
+        }
+      }
+    }
+
+    if (!initialized) {
+      initializeAuth()
+    }
+
+    // Listen for auth changes
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!mounted) return
+
+      console.log("Auth state changed:", event, session?.user?.email)
+
+      setUser(session?.user ?? null)
+
+      if (session?.user && event !== "SIGNED_OUT") {
+        await fetchProfile(session.user.id)
+      } else {
+        setProfile(null)
+      }
+
+      if (initialized) {
+        setLoading(false)
+      }
+    })
+
+    return () => {
+      mounted = false
+      subscription.unsubscribe()
+    }
+  }, [initialized, fetchProfile])
 
   const signIn = async (email: string, password: string) => {
     try {
@@ -113,6 +135,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (error) {
         console.error("Sign in error:", error)
+        setLoading(false)
         return { error }
       }
 
@@ -121,15 +144,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           title: "Welcome back!",
           description: "You have successfully signed in.",
         })
+        // Don't set loading to false here - let the auth state change handle it
         return { error: null }
       }
 
+      setLoading(false)
       return { error: new Error("Unknown error occurred") }
     } catch (error: any) {
       console.error("Sign in error:", error)
-      return { error }
-    } finally {
       setLoading(false)
+      return { error }
     }
   }
 
@@ -150,6 +174,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (error) {
         console.error("Sign up error:", error)
+        setLoading(false)
         return { error }
       }
 
@@ -160,6 +185,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             title: "Check your email",
             description: "We've sent you a confirmation link to complete your registration.",
           })
+          setLoading(false)
           return { error: null }
         }
 
@@ -188,15 +214,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           description: "Your account has been created successfully.",
         })
 
+        // Don't set loading to false here - let the auth state change handle it
         return { error: null }
       }
 
+      setLoading(false)
       return { error: new Error("Unknown error occurred") }
     } catch (error: any) {
       console.error("Sign up error:", error)
-      return { error }
-    } finally {
       setLoading(false)
+      return { error }
     }
   }
 
