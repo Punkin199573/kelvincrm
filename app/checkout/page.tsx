@@ -19,6 +19,14 @@ const membershipTiers = {
   avalanche_backstage: { name: "Avalanche Backstage", price: 49.99 },
 }
 
+// Safe price formatting function
+const formatPrice = (price: number | undefined | null): string => {
+  if (typeof price !== "number" || isNaN(price)) {
+    return "0.00"
+  }
+  return price.toFixed(2)
+}
+
 function CheckoutForm() {
   const [isLoading, setIsLoading] = useState(false)
   const [tier, setTier] = useState<string>("")
@@ -42,10 +50,10 @@ function CheckoutForm() {
       setTier(tierParam)
       setEmail(decodeURIComponent(emailParam))
       setIsSignup(signupParam === "true")
-    } else if (cartState.items.length === 0) {
+    } else if (!cartState?.items || cartState.items.length === 0) {
       router.push("/store")
     }
-  }, [searchParams, router, cartState.items.length])
+  }, [searchParams, router, cartState?.items])
 
   const handleSubscriptionPayment = async () => {
     setIsLoading(true)
@@ -95,7 +103,7 @@ function CheckoutForm() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          items: cartState.items,
+          items: cartState?.items || [],
           userId: user?.id,
           userEmail: user?.email,
         }),
@@ -122,7 +130,8 @@ function CheckoutForm() {
 
   const selectedTier = tier ? membershipTiers[tier as keyof typeof membershipTiers] : null
   const isSubscription = isSignup && selectedTier
-  const isStoreCheckout = cartState.items.length > 0
+  const isStoreCheckout = cartState?.items && cartState.items.length > 0
+  const cartTotal = cartState?.total || 0
 
   if (!isSubscription && !isStoreCheckout) {
     return (
@@ -161,7 +170,7 @@ function CheckoutForm() {
                       <p className="text-sm text-muted-foreground">Monthly subscription</p>
                     </div>
                     <div className="text-right">
-                      <div className="font-bold">${selectedTier.price}</div>
+                      <div className="font-bold">${formatPrice(selectedTier.price)}</div>
                       <div className="text-sm text-muted-foreground">/month</div>
                     </div>
                   </div>
@@ -169,7 +178,7 @@ function CheckoutForm() {
                   <div className="border-t pt-4">
                     <div className="flex items-center justify-between font-semibold">
                       <span>Total (Monthly)</span>
-                      <span>${selectedTier.price}</span>
+                      <span>${formatPrice(selectedTier.price)}</span>
                     </div>
                   </div>
 
@@ -193,22 +202,22 @@ function CheckoutForm() {
                 </>
               )}
 
-              {isStoreCheckout && (
+              {isStoreCheckout && cartState?.items && (
                 <>
                   {cartState.items.map((item) => (
                     <div key={item.id} className="flex items-center justify-between">
                       <div>
-                        <h3 className="font-semibold">{item.name}</h3>
-                        <p className="text-sm text-muted-foreground">Qty: {item.quantity}</p>
+                        <h3 className="font-semibold">{item.name || "Unknown Item"}</h3>
+                        <p className="text-sm text-muted-foreground">Qty: {item.quantity || 1}</p>
                       </div>
-                      <div className="font-bold">${(item.price * item.quantity).toFixed(2)}</div>
+                      <div className="font-bold">${formatPrice((item.price || 0) * (item.quantity || 1))}</div>
                     </div>
                   ))}
 
                   <div className="border-t pt-4">
                     <div className="flex items-center justify-between font-semibold">
                       <span>Total</span>
-                      <span>${cartState.total.toFixed(2)}</span>
+                      <span>${formatPrice(cartTotal)}</span>
                     </div>
                   </div>
                 </>
@@ -250,7 +259,9 @@ function CheckoutForm() {
                   ) : (
                     <>
                       <CreditCard className="mr-2 h-4 w-4" />
-                      {isSubscription ? `Pay $${selectedTier?.price}/month` : `Pay $${cartState.total.toFixed(2)}`}
+                      {isSubscription
+                        ? `Pay $${formatPrice(selectedTier?.price)}/month`
+                        : `Pay $${formatPrice(cartTotal)}`}
                     </>
                   )}
                 </Button>
