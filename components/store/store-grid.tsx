@@ -2,166 +2,279 @@
 
 import { useState } from "react"
 import Image from "next/image"
+import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { useCart } from "@/components/store/cart-context"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useToast } from "@/hooks/use-toast"
-import { ShoppingCart, Star } from "lucide-react"
+import { useCart } from "./cart-context"
+import { ShoppingCart, Crown, Loader2 } from "lucide-react"
 
-const products = [
-  {
-    id: "1",
-    name: "Kelvin Creekman T-Shirt",
-    description:
-      "Premium cotton t-shirt with exclusive Kelvin Creekman design. Comfortable fit and high-quality print.",
-    price: 29.99,
-    image: "/store/product1.png",
-    category: "Apparel",
-    featured: true,
-  },
-  {
-    id: "2",
-    name: "Signature Coffee Mug",
-    description: "Start your morning right with this ceramic mug featuring Kelvin's signature. Dishwasher safe.",
-    price: 19.99,
-    image: "/store/product2.png",
-    category: "Accessories",
-    featured: false,
-  },
-  {
-    id: "3",
-    name: "Limited Edition Poster",
-    description: "High-quality print poster from Kelvin's latest album. Perfect for any fan's wall collection.",
-    price: 24.99,
-    image: "/store/product3.png",
-    category: "Collectibles",
-    featured: true,
-  },
-  {
-    id: "4",
-    name: "Kelvin Creekman Hoodie",
-    description: "Cozy fleece hoodie with embroidered logo. Perfect for concerts or casual wear.",
-    price: 49.99,
-    image: "/store/product4.png",
-    category: "Apparel",
-    featured: false,
-  },
-  {
-    id: "5",
-    name: "Autographed Photo",
-    description: "Personally signed 8x10 photo by Kelvin Creekman. Comes with certificate of authenticity.",
-    price: 39.99,
-    image: "/store/product5.png",
-    category: "Collectibles",
-    featured: true,
-  },
-  {
-    id: "6",
-    name: "Fan Club Pin Set",
-    description: "Exclusive set of 3 enamel pins featuring iconic Kelvin Creekman symbols and logos.",
-    price: 14.99,
-    image: "/store/product6.png",
-    category: "Accessories",
-    featured: false,
-  },
-]
+interface Product {
+  id: string
+  name: string
+  description: string
+  price: number
+  image: string
+  category: "apparel" | "accessories" | "music" | "collectibles"
+  inStock: boolean
+  isExclusive: boolean
+  sizes?: string[]
+  colors?: string[]
+}
 
-export function StoreGrid() {
-  const [filter, setFilter] = useState("all")
-  const { addItem } = useCart()
+interface StoreGridProps {
+  products: Product[]
+  loading?: boolean
+}
+
+export function StoreGrid({ products, loading }: StoreGridProps) {
+  const { addToCart } = useCart()
   const { toast } = useToast()
+  const [addingToCart, setAddingToCart] = useState<string | null>(null)
+  const [selectedCategory, setSelectedCategory] = useState<string>("all")
 
-  const filteredProducts = products.filter((product) => {
-    if (filter === "all") return true
-    if (filter === "featured") return product.featured
-    return product.category.toLowerCase() === filter.toLowerCase()
-  })
+  const handleAddToCart = async (product: Product, selectedSize?: string, selectedColor?: string) => {
+    setAddingToCart(product.id)
 
-  const handleAddToCart = (product: (typeof products)[0]) => {
-    addItem({
-      id: product.id,
-      name: product.name,
-      price: product.price,
-      image: product.image,
-      description: product.description,
-    })
+    try {
+      await addToCart({
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        image: product.image,
+        size: selectedSize,
+        color: selectedColor,
+        quantity: 1,
+      })
 
-    toast({
-      title: "Added to cart",
-      description: `${product.name} has been added to your cart.`,
-    })
+      toast({
+        title: "Added to cart",
+        description: `${product.name} has been added to your cart.`,
+      })
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to add item to cart. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setAddingToCart(null)
+    }
   }
 
-  const categories = ["all", "featured", "apparel", "accessories", "collectibles"]
+  const filteredProducts =
+    selectedCategory === "all" ? products : products.filter((product) => product.category === selectedCategory)
 
-  return (
-    <div className="space-y-8">
-      {/* Filter Buttons */}
-      <div className="flex flex-wrap gap-2 justify-center">
-        {categories.map((category) => (
-          <Button
-            key={category}
-            variant={filter === category ? "default" : "outline"}
-            onClick={() => setFilter(category)}
-            className="capitalize"
-          >
-            {category === "all" ? "All Products" : category}
-          </Button>
-        ))}
-      </div>
+  const featuredProducts = filteredProducts.filter((product) => product.isExclusive)
+  const regularProducts = filteredProducts.filter((product) => !product.isExclusive)
 
-      {/* Products Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredProducts.map((product) => (
-          <Card key={product.id} className="group hover:shadow-lg transition-shadow duration-200">
+  if (loading) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {[...Array(8)].map((_, i) => (
+          <Card key={i} className="animate-pulse">
             <CardHeader className="p-0">
-              <div className="relative aspect-square overflow-hidden rounded-t-lg">
-                <Image
-                  src={product.image || "/placeholder.svg"}
-                  alt={product.name}
-                  fill
-                  className="object-cover group-hover:scale-105 transition-transform duration-200"
-                />
-                {product.featured && (
-                  <Badge className="absolute top-2 left-2 bg-yellow-500 text-yellow-900">
-                    <Star className="w-3 h-3 mr-1" />
-                    Featured
-                  </Badge>
-                )}
-              </div>
+              <div className="aspect-square bg-muted rounded-t-lg" />
             </CardHeader>
-
             <CardContent className="p-4">
-              <div className="flex items-start justify-between mb-2">
-                <CardTitle className="text-lg line-clamp-1">{product.name}</CardTitle>
-                <Badge variant="secondary" className="ml-2 flex-shrink-0">
-                  {product.category}
-                </Badge>
-              </div>
-
-              <p className="text-muted-foreground text-sm line-clamp-2 mb-3">{product.description}</p>
-
-              <div className="flex items-center justify-between">
-                <span className="text-2xl font-bold text-primary">${product.price}</span>
-              </div>
+              <div className="h-4 bg-muted rounded mb-2" />
+              <div className="h-3 bg-muted rounded w-2/3" />
             </CardContent>
-
             <CardFooter className="p-4 pt-0">
-              <Button className="w-full" onClick={() => handleAddToCart(product)}>
-                <ShoppingCart className="w-4 h-4 mr-2" />
-                Add to Cart
-              </Button>
+              <div className="h-10 bg-muted rounded w-full" />
             </CardFooter>
           </Card>
         ))}
       </div>
+    )
+  }
 
-      {filteredProducts.length === 0 && (
-        <div className="text-center py-12">
-          <p className="text-muted-foreground text-lg">No products found in this category.</p>
+  if (products.length === 0) {
+    return (
+      <div className="text-center py-12">
+        <div className="w-24 h-24 mx-auto mb-4 bg-muted rounded-full flex items-center justify-center">
+          <ShoppingCart className="h-12 w-12 text-muted-foreground" />
         </div>
-      )}
+        <h3 className="text-lg font-semibold mb-2">No products found</h3>
+        <p className="text-muted-foreground">Try adjusting your filters or search terms.</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-8">
+      {/* Category Filter */}
+      <Tabs value={selectedCategory} onValueChange={setSelectedCategory} className="w-full">
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="all">All Products</TabsTrigger>
+          <TabsTrigger value="apparel">Apparel</TabsTrigger>
+          <TabsTrigger value="accessories">Accessories</TabsTrigger>
+          <TabsTrigger value="collectibles">Collectibles</TabsTrigger>
+          <TabsTrigger value="music">Music</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value={selectedCategory} className="space-y-8">
+          {/* Featured/Exclusive Products */}
+          {featuredProducts.length > 0 && (
+            <div className="space-y-6">
+              <div className="flex items-center gap-2">
+                <Crown className="h-5 w-5 text-yellow-500" />
+                <h2 className="text-2xl font-bold">Exclusive Items</h2>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {featuredProducts.map((product) => (
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    onAddToCart={handleAddToCart}
+                    isAddingToCart={addingToCart === product.id}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Regular Products */}
+          {regularProducts.length > 0 && (
+            <div className="space-y-6">
+              <h2 className="text-2xl font-bold">All Products</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {regularProducts.map((product) => (
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    onAddToCart={handleAddToCart}
+                    isAddingToCart={addingToCart === product.id}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
+  )
+}
+
+interface ProductCardProps {
+  product: Product
+  onAddToCart: (product: Product, size?: string, color?: string) => void
+  isAddingToCart: boolean
+}
+
+function ProductCard({ product, onAddToCart, isAddingToCart }: ProductCardProps) {
+  const [selectedSize, setSelectedSize] = useState<string>("")
+  const [selectedColor, setSelectedColor] = useState<string>("")
+
+  const needsSize = product.sizes && product.sizes.length > 0
+  const needsColor = product.colors && product.colors.length > 0
+  const canAddToCart = (!needsSize || selectedSize) && (!needsColor || selectedColor)
+
+  return (
+    <Card className="group hover:shadow-lg transition-all duration-200 border-2 hover:border-primary/20">
+      <CardHeader className="p-0">
+        <div className="relative aspect-square overflow-hidden rounded-t-lg bg-muted">
+          <Image
+            src={product.image || "/placeholder.svg"}
+            alt={product.name}
+            fill
+            className="object-cover group-hover:scale-105 transition-transform duration-200"
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
+          />
+
+          {/* Badges */}
+          <div className="absolute top-2 left-2 flex flex-col gap-1">
+            {product.isExclusive && (
+              <Badge className="bg-yellow-500 text-yellow-900">
+                <Crown className="h-3 w-3 mr-1" />
+                Exclusive
+              </Badge>
+            )}
+          </div>
+
+          {/* Stock indicator */}
+          {!product.inStock && (
+            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+              <Badge variant="destructive">Out of Stock</Badge>
+            </div>
+          )}
+        </div>
+      </CardHeader>
+
+      <CardContent className="p-4">
+        <h3 className="font-semibold text-lg mb-1 line-clamp-2">{product.name}</h3>
+        <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{product.description}</p>
+
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-xl font-bold">${product.price.toFixed(2)}</span>
+          <Badge variant="outline" className="capitalize">
+            {product.category}
+          </Badge>
+        </div>
+
+        {/* Size Selection */}
+        {needsSize && (
+          <div className="mb-3">
+            <label className="text-sm font-medium mb-1 block">Size</label>
+            <Select value={selectedSize} onValueChange={setSelectedSize}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select size" />
+              </SelectTrigger>
+              <SelectContent>
+                {product.sizes!.map((size) => (
+                  <SelectItem key={size} value={size}>
+                    {size}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
+        {/* Color Selection */}
+        {needsColor && (
+          <div className="mb-3">
+            <label className="text-sm font-medium mb-1 block">Color</label>
+            <Select value={selectedColor} onValueChange={setSelectedColor}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select color" />
+              </SelectTrigger>
+              <SelectContent>
+                {product.colors!.map((color) => (
+                  <SelectItem key={color} value={color}>
+                    {color}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+      </CardContent>
+
+      <CardFooter className="p-4 pt-0">
+        <Button
+          onClick={() => onAddToCart(product, selectedSize, selectedColor)}
+          disabled={!product.inStock || !canAddToCart || isAddingToCart}
+          className="w-full"
+          size="lg"
+        >
+          {isAddingToCart ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              Adding...
+            </>
+          ) : !product.inStock ? (
+            "Out of Stock"
+          ) : (
+            <>
+              <ShoppingCart className="h-4 w-4 mr-2" />
+              Add to Cart
+            </>
+          )}
+        </Button>
+      </CardFooter>
+    </Card>
   )
 }

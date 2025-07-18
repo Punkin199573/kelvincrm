@@ -2,12 +2,12 @@
 
 import { useState } from "react"
 import Image from "next/image"
-import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
-import { Calendar, MapPin, Users, Clock, Star, Crown, Zap, Ticket } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
+import { Calendar, MapPin, Users, Clock, Star, Crown, Zap, Ticket, Loader2 } from "lucide-react"
 
 interface Event {
   id: string
@@ -127,6 +127,46 @@ const mockEvents: Event[] = [
 
 export function EventsGrid() {
   const [events] = useState<Event[]>(mockEvents)
+  const [bookingEvent, setBookingEvent] = useState<string | null>(null)
+  const { toast } = useToast()
+
+  const handleBookEvent = async (event: Event) => {
+    setBookingEvent(event.id)
+
+    try {
+      const response = await fetch("/api/create-event-checkout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          eventId: event.id,
+          eventTitle: event.title,
+          price: event.memberPrice,
+          eventDate: event.date,
+          eventTime: event.time,
+          location: event.location,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (data.url) {
+        window.location.href = data.url
+      } else {
+        throw new Error(data.error || "Failed to create checkout session")
+      }
+    } catch (error) {
+      console.error("Error booking event:", error)
+      toast({
+        title: "Booking Error",
+        description: "Failed to process event booking. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setBookingEvent(null)
+    }
+  }
 
   const getEventTypeIcon = (type: string) => {
     switch (type) {
@@ -269,11 +309,22 @@ export function EventsGrid() {
                         <div className="text-sm text-muted-foreground line-through">${event.price}</div>
                       )}
                     </div>
-                    <Button asChild className="bg-gradient-electric hover:animate-electric-pulse">
-                      <Link href={`/events/${event.id}`}>
-                        <Ticket className="h-4 w-4 mr-2" />
-                        Book Now
-                      </Link>
+                    <Button
+                      onClick={() => handleBookEvent(event)}
+                      disabled={bookingEvent === event.id}
+                      className="bg-gradient-electric hover:animate-electric-pulse"
+                    >
+                      {bookingEvent === event.id ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Booking...
+                        </>
+                      ) : (
+                        <>
+                          <Ticket className="h-4 w-4 mr-2" />
+                          Book Now
+                        </>
+                      )}
                     </Button>
                   </div>
                 </CardContent>
@@ -340,8 +391,13 @@ export function EventsGrid() {
                       <div className="text-xs text-muted-foreground line-through">${event.price}</div>
                     )}
                   </div>
-                  <Button asChild size="sm" className="bg-gradient-electric">
-                    <Link href={`/events/${event.id}`}>Book</Link>
+                  <Button
+                    onClick={() => handleBookEvent(event)}
+                    disabled={bookingEvent === event.id}
+                    size="sm"
+                    className="bg-gradient-electric"
+                  >
+                    {bookingEvent === event.id ? <Loader2 className="h-4 w-4 animate-spin" /> : "Book"}
                   </Button>
                 </div>
               </CardContent>
