@@ -189,10 +189,10 @@ export async function POST(request: NextRequest) {
             </div>
             
             <div style="text-align: center;">
-              <a href="https://kelvincreekman.com/events" class="button">View All Events</a>
+              <a href="https://livewithcreekman.vip/events" class="button">View All Events</a>
             </div>
             
-            <p>If you have any questions or need to make changes to your booking, please contact us at <a href="mailto:support@kelvincreekman.com">support@kelvincreekman.com</a></p>
+            <p>If you have any questions or need to make changes to your booking, please contact us at <a href="mailto:support@livewithcreekman.vip">support@livewithcreekman.vip</a></p>
             
             <p>Rock on! 🤘<br>
             <strong>The Kelvin Creekman Team</strong></p>
