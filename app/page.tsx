@@ -1,5 +1,4 @@
 import { MembershipTiers } from "@/components/membership-tiers"
-import { FeaturedMerchandise } from "@/components/featured-merchandise"
 import { Testimonials } from "@/components/testimonials"
 import { UpcomingEvents } from "@/components/upcoming-events"
 import { HeroSection } from "@/components/hero-section"
@@ -11,7 +10,6 @@ export default function HomePage() {
       <HeroSection />
       <MembershipTiers />
       <UpcomingEvents />
-      <FeaturedMerchandise />
       <Testimonials />
      <SuperFansWidget/>
     </div>
