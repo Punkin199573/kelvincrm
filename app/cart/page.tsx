@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
@@ -17,6 +17,11 @@ export default function CartPage() {
   const { toast } = useToast()
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
+  const [isClient, setIsClient] = useState(false)
+
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
 
   const updateQuantity = (id: string, quantity: number) => {
     if (quantity <= 0) {
@@ -47,7 +52,7 @@ export default function CartPage() {
   }
 
   const proceedToCheckout = async () => {
-    if (state.items.length === 0) {
+    if (!state?.items || state.items.length === 0) {
       toast({
         title: "Cart is empty",
         description: "Please add items to your cart before checking out.",
@@ -98,11 +103,25 @@ export default function CartPage() {
     }
   }
 
-  const subtotal = state.items.reduce((sum, item) => sum + item.price * item.quantity, 0)
+  // Show loading state until client-side hydration is complete
+  if (!isClient) {
+    return (
+      <div className="min-h-screen bg-background py-12">
+        <div className="container mx-auto px-4 max-w-2xl">
+          <div className="text-center">
+            <ShoppingBag className="mx-auto h-24 w-24 text-muted-foreground mb-6" />
+            <h1 className="text-3xl font-bold mb-4">Loading cart...</h1>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  const subtotal = state?.items?.reduce((sum, item) => sum + item.price * item.quantity, 0) || 0
   const shipping = subtotal > 50 ? 0 : 9.99
   const total = subtotal + shipping
 
-  if (state.items.length === 0) {
+  if (!state?.items || state.items.length === 0) {
     return (
       <div className="min-h-screen bg-background py-12">
         <div className="container mx-auto px-4 max-w-2xl">
