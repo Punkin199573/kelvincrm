@@ -11,8 +11,12 @@ interface AuthContextType {
   user: User | null
   profile: Profile | null
   loading: boolean
-  signIn: (email: string, password: string) => Promise<void>
-  signUp: (email: string, password: string, fullName: string, tier: string) => Promise<void>
+  signIn: (email: string, password: string) => Promise<{ error?: any }>
+  signUp: (
+    email: string,
+    password: string,
+    userData: { full_name: string; membership_tier: string },
+  ) => Promise<{ error?: any }>
   signOut: () => Promise<void>
   resetPassword: (email: string) => Promise<void>
   updateProfile: (updates: Partial<Profile>) => Promise<{ error?: any }>
@@ -28,19 +32,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null)
-      if (session?.user) {
-        fetchProfile(session.user.id)
-      } else {
+    const getInitialSession = async () => {
+      try {
+        const {
+          data: { session },
+          error,
+        } = await supabase.auth.getSession()
+
+        if (error) {
+          console.error("Error getting session:", error)
+          setLoading(false)
+          return
+        }
+
+        setUser(session?.user ?? null)
+
+        if (session?.user) {
+          await fetchProfile(session.user.id)
+        } else {
+          setLoading(false)
+        }
+      } catch (error) {
+        console.error("Error in getInitialSession:", error)
         setLoading(false)
       }
-    })
+    }
+
+    getInitialSession()
 
     // Listen for auth changes
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log("Auth state changed:", event, session?.user?.email)
+
       setUser(session?.user ?? null)
 
       if (session?.user) {
@@ -58,14 +83,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const { data, error } = await supabase.from("profiles").select("*").eq("id", userId).single()
 
-      if (error && error.code !== "PGRST116") {
-        console.error("Error fetching profile:", error)
-        return
+      if (error) {
+        if (error.code === "PGRST116") {
+          // Profile doesn't exist yet, this is normal for new users
+          console.log("Profile not found, user may be new")
+        } else {
+          console.error("Error fetching profile:", error)
+        }
+        setProfile(null)
+      } else {
+        setProfile(data)
       }
-
-      setProfile(data)
     } catch (error) {
-      console.error("Error fetching profile:", error)
+      console.error("Unexpected error fetching profile:", error)
+      setProfile(null)
     } finally {
       setLoading(false)
     }
@@ -73,77 +104,99 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     try {
+      setLoading(true)
+
       const { data, error } = await supabase.auth.signInWithPassword({
-        email,
+        email: email.trim(),
         password,
       })
 
       if (error) {
-        throw error
+        console.error("Sign in error:", error)
+        return { error }
       }
 
-      toast({
-        title: "Welcome back!",
-        description: "You have successfully signed in.",
-      })
+      if (data.user) {
+        toast({
+          title: "Welcome back!",
+          description: "You have successfully signed in.",
+        })
+        return { error: null }
+      }
+
+      return { error: new Error("Unknown error occurred") }
     } catch (error: any) {
       console.error("Sign in error:", error)
-      throw error
+      return { error }
+    } finally {
+      setLoading(false)
     }
   }
 
-  const signUp = async (email: string, password: string, fullName: string, tier: string) => {
+  const signUp = async (email: string, password: string, userData: { full_name: string; membership_tier: string }) => {
     try {
-      // Add a small delay to prevent rate limiting
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+      setLoading(true)
 
       const { data, error } = await supabase.auth.signUp({
-        email,
+        email: email.trim(),
         password,
         options: {
           data: {
-            full_name: fullName,
-            tier: tier,
+            full_name: userData.full_name,
+            membership_tier: userData.membership_tier,
           },
         },
       })
 
       if (error) {
-        throw error
-      }
-
-      if (data.user && !data.user.email_confirmed_at) {
-        toast({
-          title: "Check your email",
-          description: "We've sent you a confirmation link to complete your registration.",
-        })
-        return
+        console.error("Sign up error:", error)
+        return { error }
       }
 
       if (data.user) {
-        // Create profile record
-        const { error: profileError } = await supabase.from("profiles").insert({
-          id: data.user.id,
-          email: email,
-          full_name: fullName,
-          tier: tier as any,
-          subscription_status: "active",
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        })
+        // If email confirmation is required
+        if (!data.user.email_confirmed_at) {
+          toast({
+            title: "Check your email",
+            description: "We've sent you a confirmation link to complete your registration.",
+          })
+          return { error: null }
+        }
 
-        if (profileError) {
+        // Create profile record if user is immediately confirmed
+        try {
+          const { error: profileError } = await supabase.from("profiles").insert({
+            id: data.user.id,
+            email: email.trim(),
+            full_name: userData.full_name,
+            tier: userData.membership_tier as any,
+            subscription_status: "pending",
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+
+          if (profileError) {
+            console.error("Error creating profile:", profileError)
+            // Don't return error here as the user account was created successfully
+          }
+        } catch (profileError) {
           console.error("Error creating profile:", profileError)
         }
+
+        toast({
+          title: "Account created!",
+          description: "Your account has been created successfully.",
+        })
+
+        return { error: null }
       }
 
-      toast({
-        title: "Account created!",
-        description: "Please check your email to verify your account.",
-      })
+      return { error: new Error("Unknown error occurred") }
     } catch (error: any) {
       console.error("Sign up error:", error)
-      throw error
+      return { error }
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -164,13 +217,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       })
     } catch (error: any) {
       console.error("Sign out error:", error)
-      throw error
+      toast({
+        title: "Error",
+        description: "There was an error signing out.",
+        variant: "destructive",
+      })
     }
   }
 
   const resetPassword = async (email: string) => {
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
         redirectTo: `${window.location.origin}/reset-password`,
       })
 

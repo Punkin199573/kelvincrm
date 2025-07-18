@@ -4,166 +4,132 @@ import { useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { CheckCircle, Crown, Mail, ArrowRight, Loader2 } from "lucide-react"
+import { CheckCircle, Loader2 } from "lucide-react"
 import { useAuth } from "@/components/auth/auth-provider"
 import { useToast } from "@/hooks/use-toast"
 
 export default function SignupSuccessPage() {
   const [isLoading, setIsLoading] = useState(true)
-  const [sessionData, setSessionData] = useState<any>(null)
+  const [isProcessing, setIsProcessing] = useState(false)
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { signUp } = useAuth()
+  const { user, signUp } = useAuth()
   const { toast } = useToast()
 
   useEffect(() => {
-    const sessionId = searchParams.get("session_id")
+    const processSignup = async () => {
+      try {
+        // Get signup data from session storage
+        const signupDataStr = sessionStorage.getItem("signup_data")
+        if (!signupDataStr) {
+          // No signup data, redirect to signup
+          router.replace("/signup")
+          return
+        }
 
-    if (sessionId) {
-      // Complete the signup process
-      completeSignup(sessionId)
-    } else {
-      setIsLoading(false)
-    }
-  }, [searchParams])
+        const signupData = JSON.parse(signupDataStr)
 
-  const completeSignup = async (sessionId: string) => {
-    try {
-      // Get signup data from session storage
-      const signupData = JSON.parse(sessionStorage.getItem("signup_data") || "{}")
+        // Check if user is already authenticated
+        if (user) {
+          // User is already signed in, redirect to dashboard
+          sessionStorage.removeItem("signup_data")
+          router.replace("/dashboard")
+          return
+        }
 
-      if (signupData.email && signupData.password && signupData.fullName && signupData.tier) {
-        // Create the user account
-        await signUp(signupData.email, signupData.password, signupData.fullName, signupData.tier)
+        // Check if this is coming from a successful payment
+        const sessionId = searchParams.get("session_id")
+        if (sessionId) {
+          setIsProcessing(true)
 
-        // Clear signup data
-        sessionStorage.removeItem("signup_data")
+          // Complete the signup process
+          const { error } = await signUp(signupData.email, signupData.password, {
+            full_name: signupData.fullName,
+            membership_tier: signupData.tier,
+          })
 
-        setSessionData({
-          tier: signupData.tier,
-          email: signupData.email,
-          fullName: signupData.fullName,
+          if (error) {
+            console.error("Error completing signup:", error)
+            toast({
+              title: "Signup Error",
+              description: "There was an error completing your signup. Please contact support.",
+              variant: "destructive",
+            })
+          } else {
+            // Clear signup data
+            sessionStorage.removeItem("signup_data")
+
+            toast({
+              title: "Welcome!",
+              description: "Your account has been created and your membership is active.",
+            })
+
+            // Redirect to dashboard after a short delay
+            setTimeout(() => {
+              router.replace("/dashboard")
+            }, 2000)
+          }
+        }
+      } catch (error) {
+        console.error("Error processing signup:", error)
+        toast({
+          title: "Error",
+          description: "There was an error processing your signup.",
+          variant: "destructive",
         })
+      } finally {
+        setIsLoading(false)
+        setIsProcessing(false)
       }
-    } catch (error: any) {
-      console.error("Error completing signup:", error)
-      toast({
-        title: "Signup Error",
-        description: "There was an issue completing your signup. Please contact support.",
-        variant: "destructive",
-      })
-    } finally {
-      setIsLoading(false)
     }
-  }
 
-  const getTierInfo = (tier: string) => {
-    switch (tier) {
-      case "avalanche_backstage":
-        return { name: "Avalanche Backstage", price: 49.99, color: "from-yellow-500 to-orange-500" }
-      case "blizzard_vip":
-        return { name: "Blizzard VIP", price: 19.99, color: "from-purple-500 to-blue-500" }
-      case "frost_fan":
-      default:
-        return { name: "Frost Fan", price: 9.99, color: "from-blue-400 to-cyan-500" }
-    }
-  }
+    processSignup()
+  }, [user, searchParams, router, signUp, toast])
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-          <p className="text-muted-foreground">Completing your signup...</p>
-        </div>
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardContent className="flex items-center justify-center p-8">
+            <Loader2 className="h-8 w-8 animate-spin" />
+          </CardContent>
+        </Card>
       </div>
     )
   }
 
-  const tierInfo = sessionData ? getTierInfo(sessionData.tier) : null
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 p-4">
-      <div className="max-w-2xl mx-auto pt-20">
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
-            <CheckCircle className="h-8 w-8 text-green-600 dark:text-green-400" />
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 flex items-center justify-center p-4">
+      <Card className="w-full max-w-md">
+        <CardHeader className="text-center">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
+            <CheckCircle className="h-6 w-6 text-green-600" />
           </div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent mb-2">
-            Welcome to the Fan Club!
-          </h1>
-          <p className="text-muted-foreground">
-            Your account has been created successfully and your subscription is now active.
-          </p>
-        </div>
-
-        <Card className="border-primary/20 mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-primary">
-              <Crown className="h-5 w-5" />
-              Membership Details
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {sessionData && tierInfo && (
-              <>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Membership Tier:</span>
-                  <Badge className={`bg-gradient-to-r ${tierInfo.color} text-white`}>{tierInfo.name}</Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Monthly Price:</span>
-                  <span className="font-semibold">${tierInfo.price}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Email:</span>
-                  <span className="font-medium">{sessionData.email}</span>
-                </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="border-blue-200 bg-blue-50/50 dark:border-blue-800 dark:bg-blue-950/20 mb-6">
-          <CardContent className="pt-6">
-            <div className="flex items-start gap-3">
-              <Mail className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
-              <div>
-                <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-1">Check Your Email</h3>
-                <p className="text-blue-700 dark:text-blue-300 text-sm">
-                  We've sent a confirmation email to verify your account. Please check your inbox and click the
-                  verification link to complete your setup.
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <div className="space-y-3">
-          <Button
-            onClick={() => router.push("/dashboard")}
-            className="w-full bg-primary hover:bg-primary/90 transition-colors"
-            size="lg"
-          >
-            Go to Dashboard
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Button>
-
-          <Button onClick={() => router.push("/content")} variant="outline" className="w-full" size="lg">
-            Explore Exclusive Content
-          </Button>
-        </div>
-
-        <div className="text-center mt-8 text-sm text-muted-foreground">
-          <p>
-            Need help? Contact us at{" "}
-            <a href="mailto:support@kelvincreekman.com" className="text-primary hover:underline">
-              support@kelvincreekman.com
-            </a>
-          </p>
-        </div>
-      </div>
+          <CardTitle className="text-2xl font-bold text-green-600">
+            {isProcessing ? "Processing..." : "Welcome to the Fan Club!"}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="text-center space-y-4">
+          {isProcessing ? (
+            <>
+              <Loader2 className="h-6 w-6 animate-spin mx-auto" />
+              <p className="text-muted-foreground">We're setting up your account and activating your membership...</p>
+            </>
+          ) : (
+            <>
+              <p className="text-muted-foreground">
+                Your account has been created successfully and your membership is now active!
+              </p>
+              <p className="text-sm text-muted-foreground">
+                You'll be redirected to your dashboard shortly, or you can click the button below.
+              </p>
+              <Button onClick={() => router.replace("/dashboard")} className="w-full">
+                Go to Dashboard
+              </Button>
+            </>
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }
