@@ -19,64 +19,31 @@ export default function CartPage() {
   const [isLoading, setIsLoading] = useState(false)
 
   const updateQuantity = (id: string, quantity: number) => {
-    try {
-      if (quantity <= 0) {
-        dispatch({ type: "REMOVE_ITEM", payload: id })
-        toast({
-          title: "Item removed",
-          description: "Item has been removed from your cart.",
-        })
-      } else if (quantity > 99) {
-        toast({
-          title: "Quantity limit exceeded",
-          description: "Maximum quantity per item is 99.",
-          variant: "destructive",
-        })
-      } else {
-        dispatch({ type: "UPDATE_QUANTITY", payload: { id, quantity } })
-      }
-    } catch (error) {
-      console.error("Error updating quantity:", error)
-      toast({
-        title: "Update failed",
-        description: "Failed to update item quantity. Please try again.",
-        variant: "destructive",
-      })
-    }
-  }
-
-  const removeItem = (id: string) => {
-    try {
+    if (quantity <= 0) {
       dispatch({ type: "REMOVE_ITEM", payload: id })
       toast({
         title: "Item removed",
         description: "Item has been removed from your cart.",
       })
-    } catch (error) {
-      console.error("Error removing item:", error)
-      toast({
-        title: "Removal failed",
-        description: "Failed to remove item. Please try again.",
-        variant: "destructive",
-      })
+    } else {
+      dispatch({ type: "UPDATE_QUANTITY", payload: { id, quantity } })
     }
   }
 
+  const removeItem = (id: string) => {
+    dispatch({ type: "REMOVE_ITEM", payload: id })
+    toast({
+      title: "Item removed",
+      description: "Item has been removed from your cart.",
+    })
+  }
+
   const clearCart = () => {
-    try {
-      dispatch({ type: "CLEAR_CART" })
-      toast({
-        title: "Cart cleared",
-        description: "All items have been removed from your cart.",
-      })
-    } catch (error) {
-      console.error("Error clearing cart:", error)
-      toast({
-        title: "Clear failed",
-        description: "Failed to clear cart. Please try again.",
-        variant: "destructive",
-      })
-    }
+    dispatch({ type: "CLEAR_CART" })
+    toast({
+      title: "Cart cleared",
+      description: "All items have been removed from your cart.",
+    })
   }
 
   const proceedToCheckout = async () => {
@@ -109,23 +76,21 @@ export default function CartPage() {
       })
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+        throw new Error("Failed to create checkout session")
       }
 
-      const data = await response.json()
+      const { url } = await response.json()
 
-      if (data.url) {
-        // Use window.location.assign for better error handling
-        window.location.assign(data.url)
+      if (url) {
+        window.location.href = url
       } else {
-        throw new Error("No checkout URL received from server")
+        throw new Error("No checkout URL received")
       }
     } catch (error) {
       console.error("Checkout error:", error)
       toast({
         title: "Checkout failed",
-        description: error instanceof Error ? error.message : "Unable to proceed to checkout. Please try again.",
+        description: "Unable to proceed to checkout. Please try again.",
         variant: "destructive",
       })
     } finally {
@@ -133,11 +98,7 @@ export default function CartPage() {
     }
   }
 
-  const subtotal = state.items.reduce((sum, item) => {
-    const itemPrice = typeof item.price === "number" ? item.price : 0
-    const itemQuantity = typeof item.quantity === "number" ? item.quantity : 0
-    return sum + itemPrice * itemQuantity
-  }, 0)
+  const subtotal = state.items.reduce((sum, item) => sum + item.price * item.quantity, 0)
   const shipping = subtotal > 50 ? 0 : 9.99
   const total = subtotal + shipping
 
