@@ -10,7 +10,7 @@ const exclusiveContent = [
     id: 1,
     title: "Studio Session: New Album Sneak Peek",
     description: "Watch exclusive footage from the recording of the upcoming album",
-    image: "/placeholder.svg?height=400&width=600",
+    image: "/events/IMG_7936.jpeg?height=400&width=600",
     type: "video",
     duration: "12:34",
     date: "2 days ago",
