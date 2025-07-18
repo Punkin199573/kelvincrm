@@ -1,125 +1,79 @@
 import Image from "next/image"
 import Link from "next/link"
+import { CalendarDays, MapPin, Clock } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 
-const merchandise = [
+const events = [
   {
     id: 1,
-    name: "Ice Storm Vinyl",
-    description: "Limited edition signed vinyl with exclusive frosted artwork",
-    price: 49.99,
-    image: "/placeholder.svg?height=400&width=400",
-    exclusive: true,
-    inStock: true,
+    title: "Album Release Party",
+    description: "Be the first to hear the new album live with a special Q&A session",
+    image: "/events/dd806a3f-3655-4c08-8d72-b039e5eaa94b.jpeg",
+    date: "July 20, 2025",
+    time: "8:00 PM",
+    location: "The Diamond Club, New York",
+    memberOnly: true,
   },
   {
     id: 2,
-    name: "Frozen Kingdom Tour Hoodie",
-    description: "Premium quality hoodie with 2025 tour dates and electric print",
-    price: 59.99,
-    image: "/placeholder.svg?height=400&width=400",
-    exclusive: true,
-    inStock: true,
+    title: "Virtual Acoustic Session",
+    description: "An intimate online performance with acoustic versions of fan favorites",
+    image: "/events/kelvincree1.jpg",
+    date: "July 23, 2025",
+    time: "7:00 PM",
+    location: "Online Livestream",
+    memberOnly: false,
   },
   {
     id: 3,
-    name: "Avalanche Photobook",
-    description: "Hardcover photobook with never-before-seen images from the ice caves sessions",
-    price: 39.99,
-    image: "/placeholder.svg?height=400&width=400",
-    exclusive: false,
-    inStock: false,
+    title: "Summer Tour VIP Experience",
+    description: "Exclusive pre-show meetup and premium seating for the summer tour",
+    image: "/events/IMG_7934.jpeg",
+    date: "August 10-30, 2025",
+    time: "Various",
+    location: "Multiple Cities",
+    memberOnly: true,
   },
 ]
 
-export function FeaturedMerchandise() {
+export function UpcomingEvents() {
   return (
     <div className="grid gap-6 pt-8 md:grid-cols-2 lg:grid-cols-3">
-      {merchandise.map((item, index) => (
-        <Card
-          key={item.id}
-          className={`overflow-hidden group relative ${
-            index === 0
-              ? "ember-card dark:ice-card"
-              : index === 1
-                ? "fire-card dark:metal-card"
-                : "fire-card dark:ice-card"
-          }`}
-        >
-          {/* Theme effects */}
-          <div className="absolute inset-0 opacity-5 pointer-events-none">
-            <div
-              className={`absolute inset-0 blur-[30px] animate-pulse ${
-                index === 0
-                  ? "bg-ember-400 dark:bg-frost-400"
-                  : index === 1
-                    ? "bg-fire-400 dark:bg-electric-400"
-                    : "bg-fire-500 dark:bg-electric-500"
-              }`}
-            />
-          </div>
-
-          <div className="relative aspect-square bg-muted">
+      {events.map((event) => (
+        <Card key={event.id} className="overflow-hidden group">
+          <div className="relative aspect-video">
             <Image
-              src={item.image || "/placeholder.svg"}
-              alt={item.name}
+              src={event.image || "/placeholder.svg"}
+              alt={event.title}
               fill
               className="object-cover transition-all group-hover:scale-105"
             />
-            {item.exclusive && (
-              <Badge className="absolute top-2 right-2 bg-gradient-fire dark:bg-gradient-electric animate-fire-pulse dark:animate-electric-pulse">
-                Ice Legion Exclusive
-              </Badge>
-            )}
-            {!item.inStock && (
-              <div className="absolute inset-0 bg-background/80 flex items-center justify-center">
-                <Badge
-                  variant="outline"
-                  className="text-lg font-semibold px-4 py-2 border-fire-500/50 text-fire-300 dark:border-electric-500/50 dark:text-electric-300"
-                >
-                  Coming Soon
-                </Badge>
-              </div>
-            )}
+            {event.memberOnly && <Badge className="absolute top-2 right-2 bg-primary">Members Only</Badge>}
           </div>
-
-          <CardHeader className="p-4 relative z-10">
-            <CardTitle
-              className={`text-lg ${
-                index === 0
-                  ? "ember-text dark:frost-text"
-                  : index === 1
-                    ? "fire-text dark:metal-text"
-                    : "fire-text dark:electric-text"
-              }`}
-            >
-              {item.name}
-            </CardTitle>
-            <CardDescription>{item.description}</CardDescription>
+          <CardHeader className="p-4">
+            <CardTitle className="text-lg line-clamp-1">{event.title}</CardTitle>
+            <CardDescription className="line-clamp-2">{event.description}</CardDescription>
           </CardHeader>
-
-          <CardFooter className="p-4 pt-0 flex justify-between items-center relative z-10">
-            <span className="font-bold text-primary">${item.price.toFixed(2)}</span>
-            {item.inStock ? (
-              <Button
-                asChild
-                size="sm"
-                className="rounded-full bg-gradient-fire dark:bg-gradient-electric hover:animate-fire-pulse dark:hover:animate-electric-pulse"
-              >
-                <Link href={`/store/product/${item.id}`}>{item.exclusive ? "Members Buy" : "Buy Now"}</Link>
-              </Button>
-            ) : (
-              <Button
-                size="sm"
-                variant="outline"
-                className="rounded-full border-fire-500/50 hover:border-fire-400 dark:border-electric-500/50 dark:hover:border-electric-400 bg-transparent"
-                disabled
-              >
-                Notify Me
-              </Button>
-            )}
+          <CardContent className="p-4 pt-0 space-y-2">
+            <div className="flex items-center text-sm">
+              <CalendarDays className="mr-2 h-4 w-4 text-muted-foreground" />
+              <span>{event.date}</span>
+            </div>
+            <div className="flex items-center text-sm">
+              <Clock className="mr-2 h-4 w-4 text-muted-foreground" />
+              <span>{event.time}</span>
+            </div>
+            <div className="flex items-center text-sm">
+              <MapPin className="mr-2 h-4 w-4 text-muted-foreground" />
+              <span>{event.location}</span>
+            </div>
+          </CardContent>
+          <CardFooter className="p-4 pt-0">
+            <Button asChild size="sm" className="w-full rounded-full">
+              <Link href={`/events/${event.id}`}>{event.memberOnly ? "Member RSVP" : "Get Tickets"}</Link>
+            </Button>
           </CardFooter>
         </Card>
       ))}
