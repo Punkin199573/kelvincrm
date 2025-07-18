@@ -25,15 +25,35 @@ export function LoginForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    if (!email || !password) {
+      toast({
+        title: "Missing information",
+        description: "Please enter both email and password.",
+        variant: "destructive",
+      })
+      return
+    }
+
     setIsLoading(true)
 
     try {
       await signIn(email, password)
       router.push("/dashboard")
     } catch (error: any) {
+      let errorMessage = "Invalid email or password."
+
+      if (error.message?.includes("Invalid login credentials")) {
+        errorMessage = "Invalid email or password. Please check your credentials."
+      } else if (error.message?.includes("Email not confirmed")) {
+        errorMessage = "Please check your email and confirm your account before signing in."
+      } else if (error.message) {
+        errorMessage = error.message
+      }
+
       toast({
         title: "Sign in failed",
-        description: error.message || "Invalid email or password.",
+        description: errorMessage,
         variant: "destructive",
       })
     } finally {

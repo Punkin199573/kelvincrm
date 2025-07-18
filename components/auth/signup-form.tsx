@@ -70,6 +70,15 @@ export function SignupForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
+    if (!email || !password || !fullName) {
+      toast({
+        title: "Missing information",
+        description: "Please fill in all required fields.",
+        variant: "destructive",
+      })
+      return
+    }
+
     if (password !== confirmPassword) {
       toast({
         title: "Password mismatch",
@@ -114,9 +123,23 @@ export function SignupForm() {
       // Redirect to Stripe checkout
       router.push(`/checkout?tier=${selectedTier}&email=${encodeURIComponent(email)}&signup=true`)
     } catch (error: any) {
+      let errorMessage = "An error occurred during sign up."
+
+      if (error.message?.includes("User already registered")) {
+        errorMessage = "An account with this email already exists. Please sign in instead."
+      } else if (error.message?.includes("Password should be at least")) {
+        errorMessage = "Password must be at least 6 characters long."
+      } else if (error.message?.includes("Unable to validate email")) {
+        errorMessage = "Please enter a valid email address."
+      } else if (error.message?.includes("For security purposes")) {
+        errorMessage = "Please wait a moment before trying again."
+      } else if (error.message) {
+        errorMessage = error.message
+      }
+
       toast({
         title: "Sign up failed",
-        description: error.message || "An error occurred during sign up.",
+        description: errorMessage,
         variant: "destructive",
       })
     } finally {

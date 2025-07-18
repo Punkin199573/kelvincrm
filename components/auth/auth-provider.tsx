@@ -72,86 +72,120 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    })
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
 
-    if (error) {
+      if (error) {
+        throw error
+      }
+
+      toast({
+        title: "Welcome back!",
+        description: "You have successfully signed in.",
+      })
+    } catch (error: any) {
+      console.error("Sign in error:", error)
       throw error
     }
-
-    toast({
-      title: "Welcome back!",
-      description: "You have successfully signed in.",
-    })
   }
 
   const signUp = async (email: string, password: string, fullName: string, tier: string) => {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          full_name: fullName,
-          tier: tier,
+    try {
+      // Add a small delay to prevent rate limiting
+      await new Promise((resolve) => setTimeout(resolve, 2000))
+
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: fullName,
+            tier: tier,
+          },
         },
-      },
-    })
-
-    if (error) {
-      throw error
-    }
-
-    if (data.user) {
-      // Create profile record
-      const { error: profileError } = await supabase.from("profiles").insert({
-        id: data.user.id,
-        email: email,
-        full_name: fullName,
-        tier: tier as any,
-        subscription_status: "active",
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
       })
 
-      if (profileError) {
-        console.error("Error creating profile:", profileError)
+      if (error) {
+        throw error
       }
-    }
 
-    toast({
-      title: "Account created!",
-      description: "Please check your email to verify your account.",
-    })
+      if (data.user && !data.user.email_confirmed_at) {
+        toast({
+          title: "Check your email",
+          description: "We've sent you a confirmation link to complete your registration.",
+        })
+        return
+      }
+
+      if (data.user) {
+        // Create profile record
+        const { error: profileError } = await supabase.from("profiles").insert({
+          id: data.user.id,
+          email: email,
+          full_name: fullName,
+          tier: tier as any,
+          subscription_status: "active",
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+
+        if (profileError) {
+          console.error("Error creating profile:", profileError)
+        }
+      }
+
+      toast({
+        title: "Account created!",
+        description: "Please check your email to verify your account.",
+      })
+    } catch (error: any) {
+      console.error("Sign up error:", error)
+      throw error
+    }
   }
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut()
+    try {
+      const { error } = await supabase.auth.signOut()
 
-    if (error) {
+      if (error) {
+        throw error
+      }
+
+      setUser(null)
+      setProfile(null)
+
+      toast({
+        title: "Signed out",
+        description: "You have been successfully signed out.",
+      })
+    } catch (error: any) {
+      console.error("Sign out error:", error)
       throw error
     }
-
-    toast({
-      title: "Signed out",
-      description: "You have been successfully signed out.",
-    })
   }
 
   const resetPassword = async (email: string) => {
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
-    })
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      })
 
-    if (error) {
+      if (error) {
+        throw error
+      }
+
+      toast({
+        title: "Reset email sent",
+        description: "Check your email for password reset instructions.",
+      })
+    } catch (error: any) {
+      console.error("Reset password error:", error)
       throw error
     }
-
-    toast({
-      title: "Reset email sent",
-      description: "Check your email for password reset instructions.",
-    })
   }
 
   const updateProfile = async (updates: Partial<Profile>) => {
@@ -159,20 +193,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return { error: new Error("No user logged in") }
     }
 
-    const { error } = await supabase
-      .from("profiles")
-      .update({
-        ...updates,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", user.id)
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", user.id)
 
-    if (!error) {
-      // Refresh profile data
-      await fetchProfile(user.id)
+      if (!error) {
+        // Refresh profile data
+        await fetchProfile(user.id)
+      }
+
+      return { error }
+    } catch (error: any) {
+      console.error("Update profile error:", error)
+      return { error }
     }
-
-    return { error }
   }
 
   const value = {

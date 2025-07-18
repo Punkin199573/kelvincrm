@@ -3,248 +3,110 @@ import { Resend } from "resend"
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
-// IMPORTANT: Replace this email with your actual notification email
-const NOTIFICATION_EMAIL = "steadymj@gmail.com"
+// Replace with your email address to receive notifications
+const NOTIFICATION_EMAIL = "your-email@example.com"
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const {
-      userName,
-      userEmail,
-      sessionDate,
-      sessionTime,
-      sessionType,
-      sessionDuration,
-      sessionPrice,
-      contactInfo,
-      specialRequests,
-      preferredTime,
-    } = body
+    const { email, name, sessionDate, sessionTime, amount } = body
 
-    // Send confirmation email to user
-    const userEmailResponse = await resend.emails.send({
-      from: "Kelvin Creekman Fan Club <noreply@livewithcreekman.vip>",
-      to: [userEmail],
-      subject: `Meet & Greet Confirmation: ${sessionType}`,
+    if (!email || !name || !sessionDate || !sessionTime) {
+      return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
+    }
+
+    // Format the date and time for display
+    const formattedDate = new Date(sessionDate).toLocaleDateString("en-US", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    })
+
+    // Send confirmation email to the user
+    const userEmailResult = await resend.emails.send({
+      from: "Kelvin Creekman <noreply@kelvincrm.com>",
+      to: [email],
+      subject: "Your Meet & Greet Session is Confirmed! 🎉",
       html: `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="utf-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Meet & Greet Confirmation</title>
-          <style>
-            body {
-              font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-              line-height: 1.6;
-              color: #333;
-              max-width: 600px;
-              margin: 0 auto;
-              padding: 20px;
-              background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-            }
-            .container {
-              background: white;
-              border-radius: 15px;
-              padding: 30px;
-              box-shadow: 0 15px 35px rgba(0,0,0,0.1);
-            }
-            .header {
-              text-align: center;
-              margin-bottom: 30px;
-              padding-bottom: 20px;
-              border-bottom: 3px solid #1e3c72;
-            }
-            .logo {
-              font-size: 28px;
-              font-weight: bold;
-              background: linear-gradient(135deg, #1e3c72, #2a5298);
-              -webkit-background-clip: text;
-              -webkit-text-fill-color: transparent;
-              margin-bottom: 10px;
-            }
-            .title {
-              color: #1e3c72;
-              font-size: 24px;
-              margin: 0;
-            }
-            .session-details {
-              background: linear-gradient(135deg, #f0f8ff, #e6f3ff);
-              border-radius: 10px;
-              padding: 25px;
-              margin: 25px 0;
-              border-left: 5px solid #1e3c72;
-            }
-            .detail-row {
-              display: flex;
-              justify-content: space-between;
-              margin-bottom: 15px;
-              padding-bottom: 10px;
-              border-bottom: 1px solid #d6ebff;
-            }
-            .detail-row:last-child {
-              border-bottom: none;
-              margin-bottom: 0;
-            }
-            .detail-label {
-              font-weight: bold;
-              color: #1e3c72;
-              min-width: 140px;
-            }
-            .detail-value {
-              color: #333;
-              text-align: right;
-              flex: 1;
-            }
-            .important-info {
-              background: #fff3cd;
-              border: 1px solid #ffeaa7;
-              border-radius: 8px;
-              padding: 20px;
-              margin: 25px 0;
-            }
-            .footer {
-              text-align: center;
-              margin-top: 30px;
-              padding-top: 20px;
-              border-top: 2px solid #f0f0f0;
-              color: #666;
-            }
-            .button {
-              display: inline-block;
-              background: linear-gradient(135deg, #1e3c72, #2a5298);
-              color: white;
-              padding: 12px 25px;
-              text-decoration: none;
-              border-radius: 25px;
-              font-weight: bold;
-              margin: 15px 0;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <div class="logo">❄️ KELVIN CREEKMAN ⚡</div>
-              <h1 class="title">Meet & Greet Confirmed!</h1>
-            </div>
-            
-            <p>Hey ${userName}! 🎸</p>
-            
-            <p>Your private session with Kelvin has been confirmed! This is going to be an incredible one-on-one experience that you'll never forget.</p>
-            
-            <div class="session-details">
-              <h3 style="color: #1e3c72; margin-top: 0;">🎥 Session Details</h3>
-              <div class="detail-row">
-                <span class="detail-label">Session Type:</span>
-                <span class="detail-value">${sessionType}</span>
-              </div>
-              ${
-                sessionDate
-                  ? `
-              <div class="detail-row">
-                <span class="detail-label">Date:</span>
-                <span class="detail-value">${sessionDate}</span>
-              </div>
-              `
-                  : ""
-              }
-              ${
-                sessionTime
-                  ? `
-              <div class="detail-row">
-                <span class="detail-label">Time:</span>
-                <span class="detail-value">${sessionTime}</span>
-              </div>
-              `
-                  : ""
-              }
-              ${
-                sessionDuration
-                  ? `
-              <div class="detail-row">
-                <span class="detail-label">Duration:</span>
-                <span class="detail-value">${sessionDuration}</span>
-              </div>
-              `
-                  : ""
-              }
-              ${
-                sessionPrice
-                  ? `
-              <div class="detail-row">
-                <span class="detail-label">Price:</span>
-                <span class="detail-value">${sessionPrice}</span>
-              </div>
-              `
-                  : ""
-              }
-            </div>
-            
-            ${
-              specialRequests
-                ? `
-            <div class="important-info">
-              <h4 style="margin-top: 0; color: #856404;">📝 Your Special Requests:</h4>
-              <p style="margin-bottom: 0;">${specialRequests}</p>
-            </div>
-            `
-                : ""
-            }
-            
-            <div class="important-info">
-              <h4 style="margin-top: 0; color: #856404;">⚡ Important Reminders:</h4>
-              <ul style="margin-bottom: 0;">
-                <li>This is a private, exclusive session via Signal</li>
-                <li>Download Signal app before your session</li>
-                <li>Find a quiet, well-lit space for the call</li>
-                <li>Have your questions ready - this is your chance to connect with Kelvin!</li>
-                <li>Check your email for any last-minute updates</li>
-              </ul>
-            </div>
-            
-            <p>Can't wait to meet you! 🤘<br>
-            <strong>Kelvin & The Team</strong></p>
-            
-            <div class="footer">
-              <p style="font-size: 12px; color: #999;">
-                © 2024 Kelvin Creekman Fan Club. All rights reserved.<br>
-                You're receiving this because you booked a meet & greet session.
-              </p>
-            </div>
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="text-align: center; margin-bottom: 30px;">
+            <h1 style="color: #2563eb; margin-bottom: 10px;">Session Confirmed!</h1>
+            <p style="color: #6b7280; font-size: 16px;">Your private meet & greet with Kelvin Creekman</p>
           </div>
-        </body>
-        </html>
+          
+          <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+            <h2 style="color: #1f2937; margin-top: 0;">Session Details</h2>
+            <p><strong>Date:</strong> ${formattedDate}</p>
+            <p><strong>Time:</strong> ${sessionTime}</p>
+            <p><strong>Duration:</strong> 30 minutes</p>
+            <p><strong>Platform:</strong> Signal Video Call</p>
+            <p><strong>Amount Paid:</strong> $${amount}</p>
+          </div>
+          
+          <div style="background: #dbeafe; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+            <h3 style="color: #1e40af; margin-top: 0;">Before Your Call:</h3>
+            <ul style="color: #1e40af; margin: 0; padding-left: 20px;">
+              <li>Download and install Signal app if you haven't already</li>
+              <li>Test your camera and microphone</li>
+              <li>Find a quiet, well-lit space</li>
+              <li>Join the call 2-3 minutes early</li>
+            </ul>
+          </div>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${process.env.NEXT_PUBLIC_BASE_URL}/meet-and-greet/success" 
+               style="background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+              View Session Details
+            </a>
+          </div>
+          
+          <div style="border-top: 1px solid #e5e7eb; padding-top: 20px; text-align: center; color: #6b7280; font-size: 14px;">
+            <p>Questions? Reply to this email or contact us at support@kelvincrm.com</p>
+            <p>Thank you for being an amazing fan! 🎵</p>
+          </div>
+        </div>
       `,
     })
 
     // Send notification email to admin
-    const adminEmailResponse = await resend.emails.send({
-      from: "Kelvin Creekman Fan Club <noreply@kelvincreekman.com>",
+    const adminEmailResult = await resend.emails.send({
+      from: "Kelvin CRM <noreply@kelvincrm.com>",
       to: [NOTIFICATION_EMAIL],
-      subject: `New Meet & Greet Booking: ${userName}`,
+      subject: `New Meet & Greet Booking - ${name}`,
       html: `
-        <h2>New Meet & Greet Booking</h2>
-        <p><strong>User:</strong> ${userName} (${userEmail})</p>
-        <p><strong>Session Type:</strong> ${sessionType}</p>
-        <p><strong>Date:</strong> ${sessionDate || "TBD"}</p>
-        <p><strong>Time:</strong> ${sessionTime || "TBD"}</p>
-        <p><strong>Duration:</strong> ${sessionDuration || "30 minutes"}</p>
-        <p><strong>Price:</strong> ${sessionPrice || "$99.99"}</p>
-        ${contactInfo ? `<p><strong>Contact Info:</strong> ${JSON.stringify(contactInfo)}</p>` : ""}
-        ${specialRequests ? `<p><strong>Special Requests:</strong> ${specialRequests}</p>` : ""}
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <h1 style="color: #dc2626;">New Meet & Greet Booking</h1>
+          
+          <div style="background: #fef2f2; padding: 20px; border-radius: 8px; border-left: 4px solid #dc2626;">
+            <h2 style="margin-top: 0; color: #991b1b;">Booking Details</h2>
+            <p><strong>Customer:</strong> ${name}</p>
+            <p><strong>Email:</strong> ${email}</p>
+            <p><strong>Date:</strong> ${formattedDate}</p>
+            <p><strong>Time:</strong> ${sessionTime}</p>
+            <p><strong>Amount:</strong> $${amount}</p>
+            <p><strong>Booked:</strong> ${new Date().toLocaleString()}</p>
+          </div>
+          
+          <div style="margin-top: 20px; padding: 15px; background: #f0f9ff; border-radius: 6px;">
+            <p style="margin: 0; color: #0369a1;">
+              <strong>Action Required:</strong> Please add this session to your calendar and prepare the Signal call link.
+            </p>
+          </div>
+        </div>
       `,
     })
 
-    if (userEmailResponse.error || adminEmailResponse.error) {
-      console.error("Error sending emails:", { userEmailResponse, adminEmailResponse })
-      return NextResponse.json({ error: "Failed to send emails" }, { status: 500 })
-    }
+    console.log("User email result:", userEmailResult)
+    console.log("Admin email result:", adminEmailResult)
 
-    return NextResponse.json({ success: true, data: { userEmailResponse, adminEmailResponse } })
+    return NextResponse.json({
+      success: true,
+      userEmailId: userEmailResult.data?.id,
+      adminEmailId: adminEmailResult.data?.id,
+    })
   } catch (error) {
-    console.error("Error in send-meetgreet-confirmation:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    console.error("Error sending meet & greet confirmation:", error)
+    return NextResponse.json({ error: "Failed to send confirmation email" }, { status: 500 })
   }
 }
