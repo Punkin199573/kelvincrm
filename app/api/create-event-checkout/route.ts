@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
     const { eventId, eventTitle, price, eventDate, eventTime, location } = await request.json()
 
     if (!eventId || !eventTitle || !price) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
+      return NextResponse.json({ error: "Missing required event information" }, { status: 400 })
     }
 
     const session = await stripe.checkout.sessions.create({
@@ -22,7 +22,6 @@ export async function POST(request: NextRequest) {
             product_data: {
               name: eventTitle,
               description: `Event on ${eventDate} at ${eventTime} - ${location}`,
-              images: ["https://your-domain.com/event-image.jpg"], // You can add event images here
             },
             unit_amount: Math.round(price * 100), // Convert to cents
           },
@@ -30,20 +29,22 @@ export async function POST(request: NextRequest) {
         },
       ],
       mode: "payment",
-      success_url: `${request.nextUrl.origin}/events/success?session_id={CHECKOUT_SESSION_ID}&event_id=${eventId}`,
-      cancel_url: `${request.nextUrl.origin}/events`,
+      success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/events/success?session_id={CHECKOUT_SESSION_ID}&event_id=${eventId}`,
+      cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/events`,
       metadata: {
+        type: "event_booking",
         eventId,
         eventTitle,
         eventDate,
         eventTime,
         location,
+        price: price.toString(),
       },
     })
 
-    return NextResponse.json({ url: session.url })
-  } catch (error) {
+    return NextResponse.json({ url: session.url, sessionId: session.id })
+  } catch (error: any) {
     console.error("Error creating event checkout session:", error)
-    return NextResponse.json({ error: "Failed to create checkout session" }, { status: 500 })
+    return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }
