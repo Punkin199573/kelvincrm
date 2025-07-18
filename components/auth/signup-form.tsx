@@ -147,6 +147,19 @@ export function SignupForm() {
     }
   }
 
+  // Safe price formatting function
+  const formatPrice = (price: number | undefined): string => {
+    if (typeof price !== "number" || isNaN(price)) {
+      return "0.00"
+    }
+    return price.toFixed(2)
+  }
+
+  // Get selected tier safely
+  const getSelectedTier = () => {
+    return membershipTiers.find((t) => t.id === selectedTier) || membershipTiers[1]
+  }
+
   return (
     <div className="space-y-6">
       {/* Membership Tier Selection */}
@@ -173,7 +186,7 @@ export function SignupForm() {
                       {tier.popular && <Badge className="bg-primary text-primary-foreground">Most Popular</Badge>}
                     </div>
                     <div className="text-right">
-                      <div className="text-2xl font-bold">${tier.price}</div>
+                      <div className="text-2xl font-bold">${formatPrice(tier.price)}</div>
                       <div className="text-sm text-muted-foreground">/month</div>
                     </div>
                   </div>
@@ -267,7 +280,7 @@ export function SignupForm() {
               Processing...
             </>
           ) : (
-            `Continue to Payment - $${membershipTiers.find((t) => t.id === selectedTier)?.price}/month`
+            `Continue to Payment - $${formatPrice(getSelectedTier().price)}/month`
           )}
         </Button>
 

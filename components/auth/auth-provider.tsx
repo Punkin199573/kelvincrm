@@ -95,7 +95,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signUp = async (email: string, password: string, fullName: string, tier: string) => {
     try {
       // Add a small delay to prevent rate limiting
-      await new Promise((resolve) => setTimeout(resolve, 2000))
+      await new Promise((resolve) => setTimeout(resolve, 1000))
 
       const { data, error } = await supabase.auth.signUp({
         email,

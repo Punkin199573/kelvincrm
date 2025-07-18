@@ -1,42 +1,70 @@
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+
 export default function TermsPage() {
   return (
-    <div className="min-h-screen bg-background py-12">
-      <div className="container mx-auto px-4 max-w-4xl">
-        <h1 className="text-4xl font-bold mb-8">Terms of Service</h1>
+    <div className="container mx-auto px-4 py-8 max-w-4xl">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-3xl font-bold text-center">Terms of Service</CardTitle>
+        </CardHeader>
+        <CardContent className="prose prose-gray dark:prose-invert max-w-none">
+          <div className="space-y-6">
+            <section>
+              <h2 className="text-2xl font-semibold mb-3">1. Acceptance of Terms</h2>
+              <p className="text-muted-foreground">
+                By accessing and using this website, you accept and agree to be bound by the terms and provision of this
+                agreement.
+              </p>
+            </section>
 
-        <div className="prose prose-gray dark:prose-invert max-w-none">
-          <p className="text-lg text-muted-foreground mb-8">Last updated: {new Date().toLocaleDateString()}</p>
+            <section>
+              <h2 className="text-2xl font-semibold mb-3">2. Membership Services</h2>
+              <p className="text-muted-foreground">
+                Our membership services provide access to exclusive content, events, and merchandise. Membership fees
+                are charged monthly and are non-refundable.
+              </p>
+            </section>
 
-          <section className="mb-8">
-            <h2 className="text-2xl font-semibold mb-4">Acceptance of Terms</h2>
-            <p>
-              By accessing and using this website, you accept and agree to be bound by the terms and provision of this
-              agreement.
-            </p>
-          </section>
+            <section>
+              <h2 className="text-2xl font-semibold mb-3">3. User Conduct</h2>
+              <p className="text-muted-foreground">
+                Users agree to use the service in a lawful manner and not to engage in any activity that could harm the
+                service or other users.
+              </p>
+            </section>
 
-          <section className="mb-8">
-            <h2 className="text-2xl font-semibold mb-4">Use License</h2>
-            <p>
-              Permission is granted to temporarily download one copy of the materials on Kelvin Creekman Fan Club's
-              website for personal, non-commercial transitory viewing only.
-            </p>
-          </section>
+            <section>
+              <h2 className="text-2xl font-semibold mb-3">4. Privacy</h2>
+              <p className="text-muted-foreground">
+                Your privacy is important to us. Please review our Privacy Policy to understand how we collect and use
+                your information.
+              </p>
+            </section>
 
-          <section className="mb-8">
-            <h2 className="text-2xl font-semibold mb-4">Disclaimer</h2>
-            <p>
-              The materials on Kelvin Creekman Fan Club's website are provided on an 'as is' basis. Kelvin Creekman Fan
-              Club makes no warranties, expressed or implied.
-            </p>
-          </section>
+            <section>
+              <h2 className="text-2xl font-semibold mb-3">5. Termination</h2>
+              <p className="text-muted-foreground">
+                We reserve the right to terminate or suspend access to our service immediately, without prior notice,
+                for any reason whatsoever.
+              </p>
+            </section>
 
-          <section className="mb-8">
-            <h2 className="text-2xl font-semibold mb-4">Contact Information</h2>
-            <p>If you have any questions about these Terms of Service, please contact us at terms@kelvincrm.com</p>
-          </section>
-        </div>
-      </div>
+            <section>
+              <h2 className="text-2xl font-semibold mb-3">6. Contact Information</h2>
+              <p className="text-muted-foreground">
+                If you have any questions about these Terms of Service, please contact us at{" "}
+                <a href="mailto:support@kelvincreekman.com" className="text-primary hover:underline">
+                  support@kelvincreekman.com
+                </a>
+              </p>
+            </section>
+
+            <div className="mt-8 pt-6 border-t">
+              <p className="text-sm text-muted-foreground">Last updated: {new Date().toLocaleDateString()}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }
