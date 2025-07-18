@@ -9,33 +9,16 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet"
-import {
-  Menu,
-  Home,
-  Calendar,
-  Store,
-  Video,
-  Users,
-  Music,
-  Crown,
-  User,
-  LogIn,
-  UserPlus,
-  Settings,
-  ShoppingCart,
-  LogOut,
-} from "lucide-react"
+import { Menu, Home, Calendar, Store, Video, User, LogIn, UserPlus, ShoppingCart, LogOut } from "lucide-react"
 import { useAuth } from "@/components/auth/auth-provider"
 import { useCart } from "@/components/store/cart-context"
 import { ModeToggle } from "@/components/mode-toggle"
 
 const navigationItems = [
   { name: "Home", href: "/", icon: Home },
-  { name: "Content", href: "/content", icon: Music },
-  { name: "Events", href: "/events", icon: Calendar },
   { name: "Store", href: "/store", icon: Store },
+  { name: "Events", href: "/events", icon: Calendar },
   { name: "Meet & Greet", href: "/meet-and-greet", icon: Video },
-  { name: "Community", href: "/community", icon: Users },
 ]
 
 export function MobileNav() {
@@ -66,7 +49,7 @@ export function MobileNav() {
         <Button
           variant="ghost"
           size="icon"
-          className="h-10 w-10 rounded-lg border border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 hover:text-electric-400 transition-colors"
+          className="h-10 w-10 rounded-lg border border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 hover:text-primary transition-colors"
           aria-label="Open mobile navigation menu"
         >
           <Menu className="h-5 w-5" />
@@ -74,10 +57,10 @@ export function MobileNav() {
         </Button>
       </SheetTrigger>
 
-      <SheetContent side="left" className="w-80 p-0 bg-background/95 backdrop-blur-lg border-electric-700/30">
+      <SheetContent side="left" className="w-80 p-0 bg-background/95 backdrop-blur-lg border-border/30">
         <div className="flex flex-col h-full">
           {/* Header */}
-          <SheetHeader className="p-6 pb-4 border-b border-electric-700/20">
+          <SheetHeader className="p-6 pb-4 border-b border-border/20">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Image
@@ -85,10 +68,10 @@ export function MobileNav() {
                   alt="Kelvin Creekman"
                   width={40}
                   height={40}
-                  className="rounded-full border-2 border-electric-500/50 shadow-lg shadow-electric-500/20"
+                  className="rounded-full border-2 border-primary/50 shadow-lg shadow-primary/20"
                 />
                 <div>
-                  <SheetTitle className="text-left text-lg font-bold bg-gradient-to-r from-electric-400 to-frost-400 bg-clip-text text-transparent">
+                  <SheetTitle className="text-left text-lg font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
                     Kelvin Creekman
                   </SheetTitle>
                   <p className="text-sm text-muted-foreground">Fan Club</p>
@@ -100,9 +83,9 @@ export function MobileNav() {
 
           {/* User Section */}
           {user && profile && (
-            <div className="p-6 pb-4 border-b border-electric-700/20">
+            <div className="p-6 pb-4 border-b border-border/20">
               <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-r from-electric-400 to-frost-400 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-r from-primary to-primary/60 flex items-center justify-center">
                   <User className="h-5 w-5 text-white" />
                 </div>
                 <div className="flex-1 min-w-0">
@@ -112,17 +95,9 @@ export function MobileNav() {
               </div>
 
               <div className="flex gap-2 flex-wrap">
-                {profile.membership_tier && (
-                  <Badge className="bg-gold-500/20 text-gold-600 border-gold-500/30">
-                    <Crown className="h-3 w-3 mr-1" />
-                    {profile.membership_tier}
-                  </Badge>
-                )}
-
-                {profile.is_admin && (
-                  <Badge className="bg-purple-500/20 text-purple-600 border-purple-500/30">
-                    <Settings className="h-3 w-3 mr-1" />
-                    Admin
+                {profile.tier && (
+                  <Badge className="bg-primary/20 text-primary border-primary/30">
+                    {profile.tier.replace("_", " ")}
                   </Badge>
                 )}
               </div>
@@ -143,7 +118,7 @@ export function MobileNav() {
                   className={cn(
                     "flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium transition-colors",
                     isActive
-                      ? "bg-electric-500/10 text-electric-600 dark:bg-ice-500/10 dark:text-ice-400"
+                      ? "bg-primary/10 text-primary"
                       : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
                   )}
                 >
@@ -157,53 +132,35 @@ export function MobileNav() {
 
             {/* Cart */}
             <Link
-              href="/store"
+              href="/cart"
               onClick={handleLinkClick}
               className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
             >
               <ShoppingCart className="h-5 w-5" />
               <span>Cart</span>
-              {cartItemCount > 0 && <Badge className="ml-auto bg-electric-500 text-white">{cartItemCount}</Badge>}
+              {cartItemCount > 0 && <Badge className="ml-auto bg-primary text-white">{cartItemCount}</Badge>}
             </Link>
 
             {/* User-specific Links */}
             {user && (
-              <>
-                <Link
-                  href="/dashboard"
-                  onClick={handleLinkClick}
-                  className={cn(
-                    "flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium transition-colors",
-                    pathname === "/dashboard"
-                      ? "bg-electric-500/10 text-electric-600 dark:bg-ice-500/10 dark:text-ice-400"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
-                  )}
-                >
-                  <User className="h-5 w-5" />
-                  My Dashboard
-                </Link>
-
-                {profile?.is_admin && (
-                  <Link
-                    href="/admin"
-                    onClick={handleLinkClick}
-                    className={cn(
-                      "flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium transition-colors",
-                      pathname === "/admin"
-                        ? "bg-purple-500/10 text-purple-600 dark:bg-purple-500/10 dark:text-purple-400"
-                        : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
-                    )}
-                  >
-                    <Crown className="h-5 w-5" />
-                    Admin Dashboard
-                  </Link>
+              <Link
+                href="/dashboard"
+                onClick={handleLinkClick}
+                className={cn(
+                  "flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium transition-colors",
+                  pathname === "/dashboard"
+                    ? "bg-primary/10 text-primary"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
                 )}
-              </>
+              >
+                <User className="h-5 w-5" />
+                My Dashboard
+              </Link>
             )}
           </nav>
 
           {/* Footer Actions */}
-          <div className="p-6 pt-4 border-t border-electric-700/20 space-y-3">
+          <div className="p-6 pt-4 border-t border-border/20 space-y-3">
             {user ? (
               <Button
                 onClick={handleSignOut}
@@ -217,7 +174,7 @@ export function MobileNav() {
               <div className="space-y-2">
                 <Button
                   asChild
-                  className="w-full bg-gradient-to-r from-electric-400 to-frost-400 hover:from-electric-500 hover:to-frost-500"
+                  className="w-full bg-gradient-to-r from-primary to-primary/60 hover:from-primary/90 hover:to-primary/50"
                 >
                   <Link href="/login" onClick={handleLinkClick}>
                     <LogIn className="h-4 w-4 mr-2" />

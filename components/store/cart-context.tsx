@@ -9,6 +9,8 @@ interface CartItem {
   price: number
   quantity: number
   image?: string
+  size?: string
+  color?: string
 }
 
 interface CartState {
@@ -92,7 +94,6 @@ interface CartContextType {
   removeItem: (id: string) => void
   updateQuantity: (id: string, quantity: number) => void
   clearCart: () => void
-  items: CartItem[]
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined)
@@ -146,7 +147,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     removeItem,
     updateQuantity,
     clearCart,
-    items: state.items || [], // Ensure items is always an array
   }
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>

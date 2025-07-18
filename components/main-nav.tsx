@@ -14,7 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Menu, ShoppingCart, User, LogOut, Settings, Crown } from "lucide-react"
+import { Menu, ShoppingCart, User, LogOut } from "lucide-react"
 import { useAuth } from "@/components/auth/auth-provider"
 import { useCart } from "@/components/store/cart-context"
 import { ModeToggle } from "@/components/mode-toggle"
@@ -24,7 +24,6 @@ const navigation = [
   { name: "Store", href: "/store" },
   { name: "Events", href: "/events" },
   { name: "Meet & Greet", href: "/meet-and-greet" },
-  { name: "Content", href: "/content" },
 ]
 
 export function MainNav() {
@@ -53,7 +52,7 @@ export function MainNav() {
     }
   }
 
-  const tierInfo = getTierInfo(profile?.tier || "frost_fan")
+  const tierInfo = profile?.tier ? getTierInfo(profile.tier) : { name: "Fan", color: "from-gray-400 to-gray-600" }
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -87,10 +86,10 @@ export function MainNav() {
           <ModeToggle />
 
           {/* Cart */}
-          <Link href="/store">
+          <Link href="/cart">
             <Button variant="ghost" size="icon" className="relative">
               <ShoppingCart className="h-5 w-5" />
-              {state.items.length > 0 && (
+              {state?.items && state.items.length > 0 && (
                 <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs">
                   {state.items.length}
                 </Badge>
@@ -108,10 +107,7 @@ export function MainNav() {
                   </div>
                   <div className="hidden md:flex flex-col items-start">
                     <span className="text-sm font-medium">{profile?.full_name || user.email?.split("@")[0]}</span>
-                    <Badge className={`bg-gradient-to-r ${tierInfo.color} text-white text-xs`}>
-                      <Crown className="h-3 w-3 mr-1" />
-                      {tierInfo.name}
-                    </Badge>
+                    <Badge className={`bg-gradient-to-r ${tierInfo.color} text-white text-xs`}>{tierInfo.name}</Badge>
                   </div>
                 </Button>
               </DropdownMenuTrigger>
@@ -129,14 +125,6 @@ export function MainNav() {
                     Dashboard
                   </Link>
                 </DropdownMenuItem>
-                {profile?.is_admin && (
-                  <DropdownMenuItem asChild>
-                    <Link href="/admin" className="cursor-pointer">
-                      <Settings className="mr-2 h-4 w-4" />
-                      Admin Panel
-                    </Link>
-                  </DropdownMenuItem>
-                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer">
                   <LogOut className="mr-2 h-4 w-4" />

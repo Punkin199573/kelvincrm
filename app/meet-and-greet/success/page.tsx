@@ -1,7 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { useSearchParams } from "next/navigation"
+import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -17,126 +16,34 @@ import {
   User,
   Phone,
   Mail,
-  FileText,
   ExternalLink,
+  Smartphone,
 } from "lucide-react"
-import { useAuth } from "@/components/auth/auth-provider"
-import { supabase } from "@/lib/supabase/client"
 
-interface SessionDetails {
-  sessionDate: string
-  sessionTime: string
-  sessionType: string
-  duration: string
-  price: string
-  contactInfo: any
-  specialRequests?: string
-}
+// IMPORTANT: Replace this URL with your actual Signal call link
+const SIGNAL_CALL_URL = "https://signal.link/call/#key=rkdp-mzpg-xhts-dsqp-sfqx-bbbt-gbpb-qfqx"
 
 export default function MeetAndGreetSuccessPage() {
-  const [sessionDetails, setSessionDetails] = useState<SessionDetails | null>(null)
-  const [loading, setLoading] = useState(true)
-  const searchParams = useSearchParams()
-  const { user } = useAuth()
-
-  const sessionId = searchParams.get("session_id")
-
-  useEffect(() => {
-    if (sessionId && user) {
-      fetchSessionDetails()
-    }
-  }, [sessionId, user])
-
-  const fetchSessionDetails = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("session_bookings")
-        .select("*")
-        .eq("stripe_session_id", sessionId)
-        .eq("user_id", user?.id)
-        .single()
-
-      if (error) throw error
-
-      if (data) {
-        setSessionDetails({
-          sessionDate: new Date(data.session_date).toLocaleDateString("en-US", {
-            weekday: "long",
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-          }),
-          sessionTime: data.session_time,
-          sessionType: data.session_type,
-          duration: `${data.duration_minutes} minutes`,
-          price: `$${data.amount_paid.toFixed(2)}`,
-          contactInfo: data.contact_info,
-          specialRequests: data.special_requests,
-        })
-      }
-    } catch (error) {
-      console.error("Error fetching session details:", error)
-    } finally {
-      setLoading(false)
-    }
-  }
+  const [sessionDetails, setSessionDetails] = useState({
+    sessionDate: "March 15, 2024",
+    sessionTime: "2:00 PM EST",
+    sessionType: "Private Video Call",
+    duration: "30 minutes",
+    price: "$99.99",
+    contactInfo: {
+      email: "user@example.com",
+      phone: "+1 (555) 123-4567",
+    },
+    specialRequests: "Looking forward to discussing music production techniques",
+  })
 
   const handleSignalCall = () => {
-    // Placeholder for your custom Signal meeting link
-    // Replace this URL with your actual Signal meeting link
-    window.open("https://signal.org/call/your-custom-meeting-link", "_blank")
+    // This will redirect to your Signal call link
+    window.open(SIGNAL_CALL_URL, "_blank")
   }
 
   const handleDownloadSignal = () => {
     window.open("https://signal.org/download/", "_blank")
-  }
-
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 flex items-center justify-center p-6">
-        <Card className="max-w-md">
-          <CardHeader>
-            <CardTitle>Access Denied</CardTitle>
-            <CardDescription>Please log in to view your session details</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button onClick={() => (window.location.href = "/login")} className="w-full">
-              Log In
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 flex items-center justify-center p-6">
-        <Card className="max-w-2xl">
-          <CardContent className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
-
-  if (!sessionDetails) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 flex items-center justify-center p-6">
-        <Card className="max-w-md">
-          <CardHeader>
-            <CardTitle>Session Not Found</CardTitle>
-            <CardDescription>Unable to find your session details</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button onClick={() => (window.location.href = "/dashboard")} className="w-full">
-              Go to Dashboard
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    )
   }
 
   return (
@@ -172,7 +79,7 @@ export default function MeetAndGreetSuccessPage() {
                 </div>
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Time</p>
-                  <p className="font-semibold">{sessionDetails.sessionTime} EST</p>
+                  <p className="font-semibold">{sessionDetails.sessionTime}</p>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Duration</p>
@@ -237,14 +144,16 @@ export default function MeetAndGreetSuccessPage() {
           </Card>
         </div>
 
-        {/* Instructions */}
-        <Card>
+        {/* Signal Call Instructions */}
+        <Card className="border-blue-200 bg-blue-50 dark:bg-blue-950/20 dark:border-blue-800">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              Video Call Instructions & Guidelines
+            <CardTitle className="flex items-center gap-2 text-blue-800 dark:text-blue-200">
+              <Smartphone className="h-5 w-5" />
+              Signal Video Call Instructions
             </CardTitle>
-            <CardDescription>Please read these important guidelines before your session</CardDescription>
+            <CardDescription className="text-blue-700 dark:text-blue-300">
+              Your session will be conducted via Signal for maximum privacy and security
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="grid md:grid-cols-2 gap-6">
@@ -315,7 +224,7 @@ export default function MeetAndGreetSuccessPage() {
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Button onClick={handleSignalCall} size="lg" className="bg-blue-600 hover:bg-blue-700">
             <MessageSquare className="h-5 w-5 mr-2" />
-            Proceed to Video Call via Signal
+            Proceed to Signal Video Call
             <ExternalLink className="h-4 w-4 ml-2" />
           </Button>
 
@@ -333,7 +242,7 @@ export default function MeetAndGreetSuccessPage() {
             <p className="text-sm">
               Contact us at{" "}
               <a href="mailto:support@kelvincreekman.com" className="text-primary hover:underline">
-                support@kelvincreekman.com
+                support@livwithcreekman.vip
               </a>
             </p>
           </CardContent>

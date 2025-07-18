@@ -1,5 +1,4 @@
 import type { Metadata } from "next"
-import { StoreHeader } from "@/components/store/store-header"
 import { StoreGrid } from "@/components/store/store-grid"
 
 export const metadata: Metadata = {
@@ -75,7 +74,15 @@ export default function StorePage() {
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
-        <StoreHeader />
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent mb-4">
+            Official Merchandise Store
+          </h1>
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            Discover exclusive Kelvin Creekman merchandise and fan club items. Each purchase supports the music and
+            community you love.
+          </p>
+        </div>
         <StoreGrid products={products} />
       </div>
     </div>

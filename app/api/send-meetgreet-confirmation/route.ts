@@ -3,6 +3,9 @@ import { Resend } from "resend"
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
+// IMPORTANT: Replace this email with your actual notification email
+const NOTIFICATION_EMAIL = "steadymj@gmail.com"
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
@@ -19,11 +22,9 @@ export async function POST(request: NextRequest) {
       preferredTime,
     } = body
 
-    const isPrivateSession =
-      sessionType.includes("WHATSAPP") || sessionType.includes("FACETIME") || sessionType.includes("Private")
-
-    const { data, error } = await resend.emails.send({
-      from: "Kelvin Creekman Fan Club <noreply@kelvincreekman.com>",
+    // Send confirmation email to user
+    const userEmailResponse = await resend.emails.send({
+      from: "Kelvin Creekman Fan Club <noreply@livewithcreekman.vip>",
       to: [userEmail],
       subject: `Meet & Greet Confirmation: ${sessionType}`,
       html: `
@@ -96,13 +97,6 @@ export async function POST(request: NextRequest) {
               text-align: right;
               flex: 1;
             }
-            .tech-requirements {
-              background: #e8f5e8;
-              border: 1px solid #c3e6c3;
-              border-radius: 8px;
-              padding: 20px;
-              margin: 25px 0;
-            }
             .important-info {
               background: #fff3cd;
               border: 1px solid #ffeaa7;
@@ -117,15 +111,6 @@ export async function POST(request: NextRequest) {
               border-top: 2px solid #f0f0f0;
               color: #666;
             }
-            .social-links {
-              margin: 20px 0;
-            }
-            .social-links a {
-              color: #1e3c72;
-              text-decoration: none;
-              margin: 0 10px;
-              font-weight: bold;
-            }
             .button {
               display: inline-block;
               background: linear-gradient(135deg, #1e3c72, #2a5298);
@@ -135,14 +120,6 @@ export async function POST(request: NextRequest) {
               border-radius: 25px;
               font-weight: bold;
               margin: 15px 0;
-            }
-            .highlight {
-              background: linear-gradient(135deg, #ff6b6b, #ee5a24);
-              color: white;
-              padding: 15px;
-              border-radius: 8px;
-              text-align: center;
-              margin: 20px 0;
             }
           </style>
         </head>
@@ -155,20 +132,7 @@ export async function POST(request: NextRequest) {
             
             <p>Hey ${userName}! 🎸</p>
             
-            ${
-              isPrivateSession
-                ? `
-              <div class="highlight">
-                <h3 style="margin: 0 0 10px 0;">🔥 PRIVATE SESSION BOOKED! 🔥</h3>
-                <p style="margin: 0;">Kelvin will personally contact you within 24 hours to schedule your exclusive session!</p>
-              </div>
-              
-              <p>You've just booked an exclusive private session with Kelvin! This is going to be an incredible one-on-one experience that you'll never forget.</p>
-            `
-                : `
-              <p>Your spot in the <strong>${sessionType}</strong> has been confirmed! Get ready for an amazing group experience with Kelvin and fellow fans.</p>
-            `
-            }
+            <p>Your private session with Kelvin has been confirmed! This is going to be an incredible one-on-one experience that you'll never forget.</p>
             
             <div class="session-details">
               <h3 style="color: #1e3c72; margin-top: 0;">🎥 Session Details</h3>
@@ -216,26 +180,6 @@ export async function POST(request: NextRequest) {
               `
                   : ""
               }
-              ${
-                contactInfo
-                  ? `
-              <div class="detail-row">
-                <span class="detail-label">Contact Info:</span>
-                <span class="detail-value">${contactInfo}</span>
-              </div>
-              `
-                  : ""
-              }
-              ${
-                preferredTime
-                  ? `
-              <div class="detail-row">
-                <span class="detail-label">Preferred Time:</span>
-                <span class="detail-value">${preferredTime}</span>
-              </div>
-              `
-                  : ""
-              }
             </div>
             
             ${
@@ -249,80 +193,21 @@ export async function POST(request: NextRequest) {
                 : ""
             }
             
-            ${
-              isPrivateSession
-                ? `
-            <div class="tech-requirements">
-              <h4 style="margin-top: 0; color: #2d5016;">📱 Next Steps for Private Session:</h4>
-              <ul style="margin-bottom: 0;">
-                <li><strong>Kelvin will contact you directly</strong> within 24 hours using the contact information you provided</li>
-                <li>He'll work with you to find the perfect time that works for both of you</li>
-                <li>Make sure your device is charged and you have a stable internet connection</li>
-                <li>Find a quiet, well-lit space for the best experience</li>
-                <li>Prepare any questions or topics you'd like to discuss</li>
-                ${sessionType.includes("WHATSAPP") ? "<li>Ensure your WhatsApp is updated and working properly</li>" : ""}
-                ${sessionType.includes("FACETIME") ? "<li>Make sure your Apple ID is set up correctly for FaceTime</li>" : ""}
-                ${sessionType.includes("video") ? "<li>We'll send you a secure video link before the session</li>" : ""}
-              </ul>
-            </div>
-            `
-                : `
-            <div class="tech-requirements">
-              <h4 style="margin-top: 0; color: #2d5016;">💻 Technical Requirements:</h4>
-              <ul style="margin-bottom: 0;">
-                <li>Stable internet connection (minimum 5 Mbps recommended)</li>
-                <li>Device with camera and microphone (computer, tablet, or smartphone)</li>
-                <li>Updated web browser (Chrome, Firefox, Safari, or Edge)</li>
-                <li>Quiet environment for the best audio experience</li>
-                <li>Good lighting so Kelvin can see you clearly</li>
-              </ul>
-            </div>
-            `
-            }
-            
             <div class="important-info">
               <h4 style="margin-top: 0; color: #856404;">⚡ Important Reminders:</h4>
               <ul style="margin-bottom: 0;">
-                ${
-                  isPrivateSession
-                    ? `
-                <li>This is a private, exclusive session - please keep it personal and don't record without permission</li>
-                <li>Payment will be processed after the session is completed</li>
-                <li>If you need to reschedule, contact us at least 24 hours in advance</li>
-                `
-                    : `
-                <li>Join the session 5-10 minutes early to test your connection</li>
-                <li>Be respectful of other participants and wait your turn to speak</li>
-                <li>Recording is not permitted to protect everyone's privacy</li>
-                `
-                }
+                <li>This is a private, exclusive session via Signal</li>
+                <li>Download Signal app before your session</li>
+                <li>Find a quiet, well-lit space for the call</li>
                 <li>Have your questions ready - this is your chance to connect with Kelvin!</li>
                 <li>Check your email for any last-minute updates</li>
               </ul>
             </div>
             
-            ${
-              !isPrivateSession
-                ? `
-            <div style="text-align: center;">
-              <a href="https://kelvincreekman.com/meet-and-greet" class="button">Join Session (Link will be active 30 min before)</a>
-            </div>
-            `
-                : ""
-            }
-            
-            <p>If you have any questions or need technical support, please contact us at <a href="mailto:support@kelvincreekman.com">support@kelvincreekman.com</a></p>
-            
             <p>Can't wait to meet you! 🤘<br>
             <strong>Kelvin & The Team</strong></p>
             
             <div class="footer">
-              <div class="social-links">
-                <a href="#">Instagram</a> |
-                <a href="#">Twitter</a> |
-                <a href="#">YouTube</a> |
-                <a href="#">Spotify</a>
-              </div>
               <p style="font-size: 12px; color: #999;">
                 © 2024 Kelvin Creekman Fan Club. All rights reserved.<br>
                 You're receiving this because you booked a meet & greet session.
@@ -334,12 +219,30 @@ export async function POST(request: NextRequest) {
       `,
     })
 
-    if (error) {
-      console.error("Error sending email:", error)
-      return NextResponse.json({ error: "Failed to send email" }, { status: 500 })
+    // Send notification email to admin
+    const adminEmailResponse = await resend.emails.send({
+      from: "Kelvin Creekman Fan Club <noreply@kelvincreekman.com>",
+      to: [NOTIFICATION_EMAIL],
+      subject: `New Meet & Greet Booking: ${userName}`,
+      html: `
+        <h2>New Meet & Greet Booking</h2>
+        <p><strong>User:</strong> ${userName} (${userEmail})</p>
+        <p><strong>Session Type:</strong> ${sessionType}</p>
+        <p><strong>Date:</strong> ${sessionDate || "TBD"}</p>
+        <p><strong>Time:</strong> ${sessionTime || "TBD"}</p>
+        <p><strong>Duration:</strong> ${sessionDuration || "30 minutes"}</p>
+        <p><strong>Price:</strong> ${sessionPrice || "$99.99"}</p>
+        ${contactInfo ? `<p><strong>Contact Info:</strong> ${JSON.stringify(contactInfo)}</p>` : ""}
+        ${specialRequests ? `<p><strong>Special Requests:</strong> ${specialRequests}</p>` : ""}
+      `,
+    })
+
+    if (userEmailResponse.error || adminEmailResponse.error) {
+      console.error("Error sending emails:", { userEmailResponse, adminEmailResponse })
+      return NextResponse.json({ error: "Failed to send emails" }, { status: 500 })
     }
 
-    return NextResponse.json({ success: true, data })
+    return NextResponse.json({ success: true, data: { userEmailResponse, adminEmailResponse } })
   } catch (error) {
     console.error("Error in send-meetgreet-confirmation:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })

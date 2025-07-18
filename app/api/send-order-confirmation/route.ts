@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
       .join("")
 
     await resend.emails.send({
-      from: "Kelvin Creekman Store <store@kelvincrm.com>",
+      from: "Kelvin Creekman Store <store@livewithcreekman.vip>",
       to: [order.profiles.email],
       subject: `Order Confirmation #${order.id.slice(0, 8)}`,
       html: `
