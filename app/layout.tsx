@@ -15,6 +15,11 @@ const fontSans = FontSans({
   variable: "--font-sans",
 })
 
+const monaSans = localFont({
+  src: "../fonts/Mona-Sans.woff2", // Path to your font
+  display: "swap",
+});
+
 export default function RootLayout({
   children,
 }: Readonly<{
