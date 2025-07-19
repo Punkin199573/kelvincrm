@@ -1,42 +1,35 @@
 import type React from "react"
-import type { Metadata } from "next"
-import { Inter } from "next/font/google"
 import "./globals.css"
+import { Mona_Sans as FontSans } from "next/font/google"
+import { cn } from "@/lib/utils"
 import { ThemeProvider } from "@/components/theme-provider"
-import { AuthProvider } from "@/components/auth/auth-provider"
-import { CartProvider } from "@/components/store/cart-context"
+import { Toaster } from "@/components/ui/toaster"
 import { MainNav } from "@/components/main-nav"
 import { SiteFooter } from "@/components/site-footer"
-import { SuperFansWidget } from "@/components/super-fans-widget"
 import { MobileFooterNav } from "@/components/mobile-footer-nav"
-import { Toaster } from "@/components/ui/toaster"
+import { AuthProvider } from "@/components/auth/auth-provider"
+import { CartProvider } from "@/components/store/cart-context"
 
-const inter = Inter({ subsets: ["latin"] })
-
-export const metadata: Metadata = {
-  title: "Kelvin Creekman Fan Club",
-  description: "Join the official Kelvin Creekman fan club for exclusive content, events, and merchandise.",
-    generator: 'v0.dev'
-}
+const fontSans = FontSans({
+  subsets: ["latin"],
+  variable: "--font-sans",
+})
 
 export default function RootLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode
-}) {
+}>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={inter.className}>
+      <body className={cn("min-h-screen bg-background font-sans antialiased flex flex-col", fontSans.variable)}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <AuthProvider>
             <CartProvider>
-              <div className="relative flex min-h-screen flex-col">
-                <MainNav />
-                <main className="flex-1">{children}</main>
-                <SiteFooter />
-                <MobileFooterNav />
-                <SuperFansWidget />
-              </div>
+              <MainNav />
+              <main className="flex-grow">{children}</main>
+              <SiteFooter />
+              <MobileFooterNav />
               <Toaster />
             </CartProvider>
           </AuthProvider>
@@ -45,3 +38,7 @@ export default function RootLayout({
     </html>
   )
 }
+
+export const metadata = {
+      generator: 'v0.dev'
+    };

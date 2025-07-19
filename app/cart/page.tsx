@@ -1,264 +1,178 @@
 "use client"
 
-import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
 import { useCart } from "@/components/store/cart-context"
-import { useAuth } from "@/components/auth/auth-provider"
-import { Trash2, Plus, Minus, ShoppingBag, ArrowRight, ShoppingCart } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Separator } from "@/components/ui/separator"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
-import Link from "next/link"
+import { Loader2, ShoppingCart, XCircle } from "lucide-react"
+import Image from "next/image"
+import { useState } from "react"
 
-// Safe price formatting function
-const formatPrice = (price: number | undefined | null): string => {
-  if (typeof price !== "number" || isNaN(price) || price === null || price === undefined) {
-    return "0.00"
+// Helper to format currency safely
+const formatCurrency = (amount: number | string | undefined | null): string => {
+  if (typeof amount === "string") {
+    amount = Number.parseFloat(amount)
   }
-  return price.toFixed(2)
+  if (typeof amount !== "number" || isNaN(amount)) {
+    return "$0.00"
+  }
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount)
 }
 
 export default function CartPage() {
-  const { state: cartState, removeItem, updateQuantity, clearCart } = useCart()
-  const { user } = useAuth()
-  const { toast } = useToast()
+  const { cart, removeFromCart, updateQuantity, getCartTotal, clearCart } = useCart()
   const router = useRouter()
-  const [isCheckingOut, setIsCheckingOut] = useState(false)
-
-  const handleQuantityChange = (id: string, newQuantity: number) => {
-    if (newQuantity < 1) {
-      removeItem(id)
-    } else {
-      updateQuantity(id, newQuantity)
-    }
-  }
+  const { toast } = useToast()
+  const [isProcessing, setIsProcessing] = useState(false)
 
   const handleCheckout = async () => {
-    if (!cartState?.items || cartState.items.length === 0) {
+    if (cart.length === 0) {
       toast({
-        title: "Empty Cart",
-        description: "Please add items to your cart before checkout.",
+        title: "Cart is empty",
+        description: "Please add items to your cart before checking out.",
         variant: "destructive",
       })
       return
     }
 
-    // Validate cart items
-    const invalidItems = cartState.items.filter(
-      (item) => !item.name || typeof item.price !== "number" || item.price <= 0 || item.quantity <= 0,
-    )
-
-    if (invalidItems.length > 0) {
-      toast({
-        title: "Invalid Items",
-        description: "Some items in your cart are invalid. Please refresh and try again.",
-        variant: "destructive",
-      })
-      return
-    }
-
-    setIsCheckingOut(true)
-
+    setIsProcessing(true)
     try {
-      // Redirect to checkout page
-      router.push("/checkout")
-    } catch (error) {
+      const response = await fetch("/api/create-store-checkout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ items: cart }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Failed to create checkout session")
+      }
+
+      const { url } = await response.json()
+      if (url) {
+        clearCart() // Clear cart after successful checkout session creation
+        router.push(url)
+      } else {
+        throw new Error("No checkout URL received")
+      }
+    } catch (error: any) {
       console.error("Checkout error:", error)
       toast({
-        title: "Checkout Error",
-        description: "Failed to proceed to checkout. Please try again.",
+        title: "Checkout Failed",
+        description: error.message || "There was an error processing your checkout. Please try again.",
         variant: "destructive",
       })
     } finally {
-      setIsCheckingOut(false)
+      setIsProcessing(false)
     }
   }
 
-  const handleContinueShopping = () => {
-    router.push("/store")
-  }
-
-  // Empty cart state
-  if (!cartState?.items || cartState.items.length === 0) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 py-12">
-        <div className="container max-w-4xl mx-auto px-4">
-          <div className="text-center">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-muted rounded-full mb-6">
-              <ShoppingCart className="h-8 w-8 text-muted-foreground" />
-            </div>
-            <h1 className="text-3xl font-bold mb-4">Your Cart is Empty</h1>
-            <p className="text-muted-foreground mb-8">
-              Looks like you haven't added any items to your cart yet. Check out our exclusive merchandise!
-            </p>
-            <Button onClick={handleContinueShopping} size="lg">
-              <ShoppingBag className="mr-2 h-5 w-5" />
-              Continue Shopping
-            </Button>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 py-12">
-      <div className="container max-w-6xl mx-auto px-4">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent mb-2">
-            Shopping Cart
-          </h1>
-          <p className="text-muted-foreground">
-            {cartState.itemCount} {cartState.itemCount === 1 ? "item" : "items"} in your cart
-          </p>
-        </div>
+    <div className="container mx-auto px-4 py-8 min-h-screen">
+      <h1 className="text-4xl font-extrabold tracking-tight lg:text-5xl mb-8 text-center">Your Shopping Cart</h1>
 
-        <div className="grid lg:grid-cols-3 gap-8">
-          {/* Cart Items */}
+      {cart.length === 0 ? (
+        <Card className="max-w-md mx-auto text-center py-12">
+          <CardContent className="space-y-4">
+            <ShoppingCart className="h-16 w-16 text-muted-foreground mx-auto" />
+            <p className="text-xl font-semibold text-muted-foreground">Your cart is empty.</p>
+            <p className="text-muted-foreground">Looks like you haven't added anything to your cart yet.</p>
+            <Button onClick={() => router.push("/store")}>Start Shopping</Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-4">
-            {cartState.items.map((item) => (
-              <Card key={item.id} className="border-primary/20">
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-4">
-                    {/* Product Image */}
-                    <div className="flex-shrink-0">
-                      <img
-                        src={item.image || "/placeholder.svg?height=80&width=80"}
-                        alt={item.name || "Product"}
-                        className="w-20 h-20 object-cover rounded-lg"
-                      />
-                    </div>
-
-                    {/* Product Details */}
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-lg truncate">{item.name || "Unknown Item"}</h3>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-2xl font-bold">${formatPrice(item.price)}</span>
-                        {item.size && <Badge variant="secondary">Size: {item.size}</Badge>}
-                        {item.color && <Badge variant="secondary">Color: {item.color}</Badge>}
-                      </div>
-                    </div>
-
-                    {/* Quantity Controls */}
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-center border rounded-lg">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleQuantityChange(item.id, (item.quantity || 1) - 1)}
-                          className="h-8 w-8 p-0"
-                        >
-                          <Minus className="h-4 w-4" />
-                        </Button>
-                        <span className="px-3 py-1 min-w-[3rem] text-center">{item.quantity || 1}</span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleQuantityChange(item.id, (item.quantity || 1) + 1)}
-                          className="h-8 w-8 p-0"
-                        >
-                          <Plus className="h-4 w-4" />
-                        </Button>
-                      </div>
-
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeItem(item.id)}
-                        className="text-destructive hover:text-destructive h-8 w-8 p-0"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-
-                    {/* Item Total */}
-                    <div className="text-right">
-                      <div className="font-bold text-lg">${formatPrice((item.price || 0) * (item.quantity || 1))}</div>
-                    </div>
+            {cart.map((item) => (
+              <Card key={item.id} className="flex items-center p-4 shadow-sm">
+                <div className="relative w-24 h-24 mr-4 flex-shrink-0">
+                  <Image
+                    src={item.image || "/placeholder.svg?height=100&width=100&text=Product"}
+                    alt={item.name}
+                    fill
+                    style={{ objectFit: "cover" }}
+                    className="rounded-md"
+                  />
+                </div>
+                <div className="flex-grow">
+                  <h2 className="text-lg font-semibold">{item.name}</h2>
+                  <p className="text-muted-foreground">{formatCurrency(item.price)}</p>
+                  <div className="flex items-center mt-2">
+                    <Label htmlFor={`quantity-${item.id}`} className="sr-only">
+                      Quantity
+                    </Label>
+                    <Input
+                      id={`quantity-${item.id}`}
+                      type="number"
+                      min="1"
+                      value={item.quantity}
+                      onChange={(e) => updateQuantity(item.id, Number.parseInt(e.target.value))}
+                      className="w-20 text-center"
+                    />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removeFromCart(item.id)}
+                      className="ml-2 text-red-500 hover:text-red-700"
+                    >
+                      <XCircle className="h-5 w-5" />
+                      <span className="sr-only">Remove {item.name}</span>
+                    </Button>
                   </div>
-                </CardContent>
+                </div>
+                <div className="text-lg font-bold ml-auto">{formatCurrency(item.price * item.quantity)}</div>
               </Card>
             ))}
-
-            {/* Cart Actions */}
-            <div className="flex justify-between items-center pt-4">
-              <Button variant="outline" onClick={handleContinueShopping}>
-                <ShoppingBag className="mr-2 h-4 w-4" />
-                Continue Shopping
-              </Button>
-              <Button
-                variant="outline"
-                onClick={clearCart}
-                className="text-destructive hover:text-destructive bg-transparent"
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Clear Cart
-              </Button>
-            </div>
+            <Button variant="outline" onClick={clearCart} className="w-full mt-4 bg-transparent">
+              Clear Cart
+            </Button>
           </div>
 
-          {/* Order Summary */}
-          <div className="lg:col-span-1">
-            <Card className="border-primary/20 sticky top-4">
-              <CardHeader>
-                <CardTitle className="text-primary">Order Summary</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>Subtotal ({cartState.itemCount} items)</span>
-                    <span>${formatPrice(cartState.total)}</span>
-                  </div>
-                  <div className="flex justify-between text-sm text-muted-foreground">
-                    <span>Shipping</span>
-                    <span>Calculated at checkout</span>
-                  </div>
-                  <div className="flex justify-between text-sm text-muted-foreground">
-                    <span>Tax</span>
-                    <span>Calculated at checkout</span>
-                  </div>
-                </div>
-
-                <Separator />
-
-                <div className="flex justify-between font-semibold text-lg">
-                  <span>Total</span>
-                  <span>${formatPrice(cartState.total)}</span>
-                </div>
-
-                <Button
-                  onClick={handleCheckout}
-                  className="w-full bg-primary hover:bg-primary/90 transition-colors"
-                  size="lg"
-                  disabled={isCheckingOut}
-                >
-                  {isCheckingOut ? (
-                    "Processing..."
-                  ) : (
-                    <>
-                      Proceed to Checkout
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </>
-                  )}
-                </Button>
-
-                {!user && (
-                  <div className="text-center text-sm text-muted-foreground">
-                    <Link href="/login" className="text-primary hover:underline">
-                      Sign in
-                    </Link>{" "}
-                    for faster checkout
-                  </div>
+          <Card className="lg:col-span-1 h-fit shadow-lg">
+            <CardHeader>
+              <CardTitle>Order Summary</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex justify-between">
+                <span>Subtotal ({cart.length} items)</span>
+                <span>{formatCurrency(getCartTotal())}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Shipping</span>
+                <span>Free</span>
+              </div>
+              <Separator />
+              <div className="flex justify-between text-xl font-bold">
+                <span>Total</span>
+                <span>{formatCurrency(getCartTotal())}</span>
+              </div>
+            </CardContent>
+            <CardFooter>
+              <Button onClick={handleCheckout} className="w-full" disabled={isProcessing || cart.length === 0}>
+                {isProcessing ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  "Proceed to Checkout"
                 )}
-
-                <div className="text-xs text-muted-foreground text-center">Secure checkout powered by Stripe</div>
-              </CardContent>
-            </Card>
-          </div>
+              </Button>
+            </CardFooter>
+          </Card>
         </div>
-      </div>
+      )}
     </div>
   )
 }
