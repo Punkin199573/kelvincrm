@@ -72,7 +72,7 @@ export function LoginForm() {
         if (error.message?.includes("Invalid login credentials")) {
           errorMessage = "Invalid email or password. Please check your credentials and try again."
         } else if (error.message?.includes("Email not confirmed")) {
-          errorMessage = "Please check your email and click the confirmation link before signing in."
+          errorMessage = "Please check your email and confirm your account before signing in."
         } else if (error.message?.includes("Too many requests")) {
           errorMessage = "Too many login attempts. Please wait a moment before trying again."
         } else if (error.message?.includes("Invalid email")) {
@@ -96,10 +96,8 @@ export function LoginForm() {
         description: "You have successfully signed in.",
       })
 
-      // Small delay to ensure auth state is updated
-      setTimeout(() => {
-        router.push("/dashboard")
-      }, 100)
+      // Use replace to prevent going back to login page
+      router.replace("/dashboard")
     } catch (error: any) {
       console.error("Login error:", error)
       toast({

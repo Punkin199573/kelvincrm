@@ -73,7 +73,7 @@ const CheckoutFormContent = ({ clientSecret, amount, currency, type, metadata }:
     // This point will only be reached if there's an immediate error when
     // confirming the payment. Otherwise, your customer will be redirected to
     // your `return_url`.
-    if (error.type === "card_error" || error.type === "validation_error") {
+    if (error?.type === "card_error" || error?.type === "validation_error") {
       setMessage(error.message || "An unexpected error occurred.")
       setStatus("error")
       toast({

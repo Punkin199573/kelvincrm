@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useState, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -14,36 +14,59 @@ const tierIcons = {
   frost_fan: Star,
   blizzard_vip: Zap,
   avalanche_backstage: Crown,
-}
+} as const
 
 const tierColors = {
   frost_fan: "bg-blue-500",
   blizzard_vip: "bg-purple-500",
   avalanche_backstage: "bg-yellow-500",
-}
+} as const
 
 const tierNames = {
   frost_fan: "Frost Fan",
   blizzard_vip: "Blizzard VIP",
   avalanche_backstage: "Avalanche Backstage",
-}
+} as const
 
 export default function DashboardPage() {
   const { user, profile, loading, signOut } = useAuth()
+  const [isSigningOut, setIsSigningOut] = useState(false)
+  const [redirecting, setRedirecting] = useState(false)
   const router = useRouter()
 
+  // Memoize tier info to prevent unnecessary recalculations
+  const tierInfo = useMemo(() => {
+    const userTier = profile?.tier || "frost_fan"
+    const TierIcon = tierIcons[userTier as keyof typeof tierIcons] || Star
+    const tierColor = tierColors[userTier as keyof typeof tierColors] || "bg-blue-500"
+    const tierName = tierNames[userTier as keyof typeof tierNames] || "Frost Fan"
+
+    return { userTier, TierIcon, tierColor, tierName }
+  }, [profile?.tier])
+
   useEffect(() => {
-    if (!loading && !user) {
+    // Only redirect if we're not loading and there's no user
+    if (!loading && !user && !redirecting) {
+      setRedirecting(true)
       router.replace("/login")
     }
-  }, [user, loading, router])
+  }, [user, loading, router, redirecting])
 
   const handleSignOut = async () => {
-    await signOut()
-    router.replace("/")
+    if (isSigningOut) return
+
+    setIsSigningOut(true)
+    try {
+      await signOut()
+      router.replace("/")
+    } catch (error) {
+      console.error("Sign out error:", error)
+    } finally {
+      setIsSigningOut(false)
+    }
   }
 
-  // Show loading while checking authentication
+  // Show loading state while checking authentication
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-muted/20">
@@ -55,7 +78,7 @@ export default function DashboardPage() {
     )
   }
 
-  // Redirect if not authenticated
+  // Show login redirect if not authenticated
   if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-muted/20">
@@ -67,10 +90,7 @@ export default function DashboardPage() {
     )
   }
 
-  const userTier = profile?.tier || "frost_fan"
-  const TierIcon = tierIcons[userTier] || Star
-  const tierColor = tierColors[userTier] || "bg-blue-500"
-  const tierName = tierNames[userTier] || "Frost Fan"
+  const { TierIcon, tierColor, tierName } = tierInfo
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
@@ -92,6 +112,7 @@ export default function DashboardPage() {
               variant="destructive"
               onClick={handleSignOut}
               className="flex items-center gap-2 flex-1 sm:flex-none"
+              disabled={isSigningOut}
             >
               <LogOut className="h-4 w-4" />
               Sign Out

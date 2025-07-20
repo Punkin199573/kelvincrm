@@ -1,8 +1,8 @@
 # Admin Setup Instructions
 
 ## 🔐 Admin Credentials
-- **Email**: `cloudyzaddy@gmail.com`
-- **Password**: `KelvinAdmin2024!`
+- **Email**: `admin@example.com`
+- **Password**: `adminpassword`
 
 ## 📋 Setup Steps
 
@@ -20,8 +20,8 @@ supabase migration up
 ### 2. Admin Account Creation
 1. Navigate to your website's signup page: `/signup`
 2. Create an account with:
-   - Email: `cloudyzaddy@gmail.com`
-   - Password: `KelvinAdmin2024!`
+   - Email: `admin@example.com`
+   - Password: `adminpassword`
 3. Verify the email address
 4. Admin status will be automatically assigned via database trigger
 
@@ -95,7 +95,7 @@ If admin status isn't automatically assigned:
 \`\`\`sql
 UPDATE profiles 
 SET is_admin = true 
-WHERE email = 'cloudyzaddy@gmail.com';
+WHERE email = 'admin@example.com';
 \`\`\`
 
 ### RLS Policy Issues
@@ -121,6 +121,56 @@ The admin panel is fully responsive and works on mobile devices. All admin funct
 
 ## 📞 Support
 If you encounter any issues during setup, check the console logs and database for error messages. Most issues are related to missing environment variables or incomplete migrations.
-\`\`\`
 
-Now let me create the final setup SQL to ensure admin credentials work:
+## Prerequisites
+
+-   A deployed instance of the Kelvin Creekman Fan Club website.
+-   Access to the Supabase project associated with the website.
+
+## Steps
+
+1.  **Access the Supabase Console:**
+
+    -   Go to your Supabase project dashboard.
+    -   Navigate to the "SQL Editor" from the left sidebar.
+
+2.  **Create an Admin User:**
+
+    -   Run the following SQL query to create an admin user. Replace `'admin@example.com'` and `'adminpassword'` with the desired email and password for the admin user.
+
+    \`\`\`sql
+    INSERT INTO auth.users (email, raw_app_meta_data)
+    VALUES ('admin@example.com', '{"is_admin": true}');
+
+    -- Hash the password using pgcrypto
+    UPDATE auth.users
+    SET encrypted_password = crypt('adminpassword', gen_salt('bf'))
+    WHERE email = 'admin@example.com';
+    \`\`\`
+
+3.  **Update the `profiles` Table:**
+
+    -   Run the following SQL query to update the `profiles` table and set the `is_admin` field to `true` for the newly created user.
+
+    \`\`\`sql
+    INSERT INTO public.profiles (id, email, full_name, is_admin, created_at, updated_at)
+    VALUES (
+        (SELECT id FROM auth.users WHERE email = 'admin@example.com'),
+        'admin@example.com',
+        'Admin User',
+        TRUE,
+        NOW(),
+        NOW()
+    );
+    \`\`\`
+
+4.  **Verify Admin Access:**
+
+    -   Sign in to the website using the admin user's email and password.
+    -   Navigate to the `/admin` route. You should now have access to the admin dashboard.
+
+## Notes
+
+-   Ensure that the `pgcrypto` extension is enabled in your Supabase project. You can enable it by running `CREATE EXTENSION IF NOT EXISTS pgcrypto;` in the SQL Editor.
+-   Remember to replace the placeholder email and password with secure credentials.
+-   This setup assumes that you have the necessary RLS policies in place to protect the admin routes.

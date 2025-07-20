@@ -1,231 +1,117 @@
-# Stripe and Resend Integration Setup Guide
+# Stripe and Resend Integration Guide
 
-This guide will help you set up Stripe payments and Resend email notifications for the Kelvin Creekman Fan Club website.
+This guide provides step-by-step instructions for integrating Stripe for payments and Resend for email confirmations in the Kelvin Creekman Fan Club website.
 
 ## Prerequisites
 
-- A Vercel account (for deployment)
-- A Stripe account
-- A Resend account
-- Access to your project's environment variables
+-   A Stripe account.
+-   A Resend account.
+-   A deployed instance of the Kelvin Creekman Fan Club website.
+-   Access to the Vercel project associated with the website.
 
 ## Stripe Setup
 
-### 1. Create a Stripe Account
+1.  **Create a Stripe Account:**
 
-1. Go to [stripe.com](https://stripe.com) and create an account
-2. Complete the account verification process
-3. Navigate to the Stripe Dashboard
+    -   Go to [Stripe](https://stripe.com/) and create an account.
+    -   Follow the steps to activate your account.
 
-### 2. Get Your API Keys
+2.  **Retrieve API Keys:**
 
-1. In the Stripe Dashboard, go to **Developers** → **API keys**
-2. Copy your **Publishable key** and **Secret key**
-3. For webhooks, you'll also need the **Webhook signing secret** (see step 4)
+    -   In your Stripe dashboard, navigate to the "Developers" section.
+    -   Under "API keys", you will find your "Publishable key" and "Secret key".
+    -   Copy these keys, as you will need them to configure the environment variables in Vercel.
 
-### 3. Create Products (Optional)
+3.  **Create Webhook Endpoint:**
 
-You can create products directly in Stripe or let the application create them dynamically:
-
-1. Go to **Products** in the Stripe Dashboard
-2. Create products for:
-   - Membership tiers (Frost Fan, Blizzard VIP, Avalanche Backstage)
-   - Meet & Greet sessions
-   - Merchandise items
-
-### 4. Set Up Webhooks
-
-1. Go to **Developers** → **Webhooks**
-2. Click **Add endpoint**
-3. Set the endpoint URL to: `https://your-domain.com/api/webhooks/stripe`
-4. Select the following events:
-   - `checkout.session.completed`
-   - `payment_intent.succeeded`
-   - `payment_intent.payment_failed`
-   - `invoice.payment_succeeded`
-   - `invoice.payment_failed`
-5. Copy the **Signing secret**
-
-### 5. Environment Variables
-
-Add these to your `.env.local` file and Vercel environment variables:
-
-\`\`\`env
-# Stripe Configuration
-STRIPE_SECRET_KEY=sk_test_... # Your secret key (use sk_live_ for production)
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_... # Your publishable key
-STRIPE_WEBHOOK_SECRET=whsec_... # Your webhook signing secret
-
-# Stripe Price IDs (if using predefined products)
-STRIPE_FROST_FAN_PRICE_ID=price_...
-STRIPE_BLIZZARD_VIP_PRICE_ID=price_...
-STRIPE_AVALANCHE_BACKSTAGE_PRICE_ID=price_...
-\`\`\`
+    -   In your Stripe dashboard, navigate to the "Webhooks" section.
+    -   Click "Add endpoint" to create a new webhook.
+    -   Set the "Endpoint URL" to your Vercel deployment URL, followed by `/api/webhooks/stripe` (e.g., `https://kelvincreekman.vercel.app/api/webhooks/stripe`).
+    -   Select the following events to listen to:
+        -   `checkout.session.completed`
+        -   `payment_intent.succeeded`
+        -   `invoice.payment_succeeded`
+        -   `customer.subscription.created`
+        -   `customer.subscription.updated`
+        -   `customer.subscription.deleted`
+        -   `invoice.payment_failed`
+    -   Click "Add endpoint" to save the webhook configuration.
+    -   Copy the "Signing secret" from the webhook details page. You will need this to configure the environment variables in Vercel.
 
 ## Resend Setup
 
-### 1. Create a Resend Account
+1.  **Create a Resend Account:**
 
-1. Go to [resend.com](https://resend.com) and create an account
-2. Verify your email address
+    -   Go to [Resend](https://resend.com/) and create an account.
+    -   Follow the steps to verify your domain.
 
-### 2. Add Your Domain
+2.  **Retrieve API Key:**
 
-1. In the Resend dashboard, go to **Domains**
-2. Click **Add Domain**
-3. Enter your domain (e.g., `kelvincreekman.com`)
-4. Follow the DNS setup instructions to verify your domain
+    -   In your Resend dashboard, navigate to the "API Keys" section.
+    -   Click "Create API Key" to generate a new API key.
+    -   Copy the API key, as you will need it to configure the environment variables in Vercel.
 
-### 3. Get Your API Key
+3.  **Create Email Templates:**
 
-1. Go to **API Keys** in the Resend dashboard
-2. Click **Create API Key**
-3. Give it a name (e.g., "Kelvin Creekman Website")
-4. Copy the API key
+    -   In your Resend dashboard, navigate to the "Emails" section.
+    -   Create the following email templates:
+        -   Welcome Email: Sent to new users after signing up.
+        -   Order Confirmation Email: Sent to users after placing an order.
+        -   Event Confirmation Email: Sent to users after registering for an event.
+        -   Meet & Greet Confirmation Email: Sent to users after booking a meet & greet session.
+    -   Note the IDs of these email templates, as you may need them for further customization.
 
-### 4. Environment Variables
+## Vercel Configuration
 
-Add this to your `.env.local` file and Vercel environment variables:
+1.  **Access Vercel Project Settings:**
 
-\`\`\`env
-# Resend Configuration
-RESEND_API_KEY=re_... # Your Resend API key
-\`\`\`
+    -   Log in to your Vercel account.
+    -   Go to your project dashboard.
+    -   Navigate to the "Settings" tab.
+    -   Select "Environment Variables" from the sidebar.
 
-## UploadThing Setup
+2.  **Add Environment Variables:**
 
-### 1. Create an UploadThing Account
+    -   Add the following environment variables, using the values you retrieved from Stripe and Resend:
 
-1. Go to [uploadthing.com](https://uploadthing.com) and create an account
-2. Create a new app for your project
+        -   `STRIPE_SECRET_KEY`: Your Stripe secret key.
+        -   `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`: Your Stripe publishable key.
+        -   `STRIPE_WEBHOOK_SECRET`: Your Stripe webhook signing secret.
+        -   `RESEND_API_KEY`: Your Resend API key.
 
-### 2. Get Your API Keys
+3.  **Deploy the Project:**
 
-1. In the UploadThing dashboard, go to your app settings
-2. Copy your **App ID** and **Secret**
-
-### 3. Environment Variables
-
-Add these to your `.env.local` file and Vercel environment variables:
-
-\`\`\`env
-# UploadThing Configuration
-UPLOADTHING_SECRET=sk_live_... # Your UploadThing secret
-UPLOADTHING_APP_ID=your-app-id # Your UploadThing app ID
-\`\`\`
-
-## Complete Environment Variables List
-
-Here's the complete list of environment variables you need:
-
-\`\`\`env
-# Database (Supabase)
-NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
-SUPABASE_SERVICE_ROLE_KEY=eyJ...
-
-# Stripe
-STRIPE_SECRET_KEY=sk_test_...
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
-STRIPE_WEBHOOK_SECRET=whsec_...
-STRIPE_FROST_FAN_PRICE_ID=price_...
-STRIPE_BLIZZARD_VIP_PRICE_ID=price_...
-STRIPE_AVALANCHE_BACKSTAGE_PRICE_ID=price_...
-
-# Resend
-RESEND_API_KEY=re_...
-
-# UploadThing
-UPLOADTHING_SECRET=sk_live_...
-UPLOADTHING_APP_ID=your-app-id
-
-# Application
-NEXT_PUBLIC_BASE_URL=https://your-domain.com
-\`\`\`
-
-## Deployment Steps
-
-### 1. Local Development
-
-1. Copy `.env.example` to `.env.local`
-2. Fill in all the environment variables
-3. Run `npm run dev` to test locally
-
-### 2. Vercel Deployment
-
-1. Push your code to GitHub
-2. Connect your repository to Vercel
-3. In Vercel dashboard, go to your project settings
-4. Add all environment variables in **Settings** → **Environment Variables**
-5. Redeploy your application
-
-### 3. Database Setup
-
-1. Run the Supabase migrations:
-   \`\`\`bash
-   npx supabase db push
-   \`\`\`
-
-2. Set up Row Level Security policies
-3. Create an admin user in the `profiles` table
+    -   Click the "Deploy" button to redeploy your project with the new environment variables.
 
 ## Testing
 
-### Test Stripe Integration
+1.  **Sign Up and Sign In:**
 
-1. Use Stripe's test card numbers:
-   - Success: `4242 4242 4242 4242`
-   - Decline: `4000 0000 0000 0002`
+    -   Ensure that users can successfully sign up and sign in to the website.
+    -   Verify that the welcome email is sent to new users.
 
-2. Test the following flows:
-   - Membership subscription
-   - Meet & Greet session booking
-   - Store purchases
+2.  **Test Membership Payments:**
 
-### Test Resend Integration
+    -   Sign up for a membership tier and complete the payment process.
+    -   Verify that the user's tier is updated in the Supabase database.
+    -   Ensure that the welcome email is sent to the user.
 
-1. Book a meet & greet session
-2. Check that confirmation emails are sent
-3. Verify email formatting and content
+3.  **Test Store Purchases:**
 
-### Test UploadThing Integration
+    -   Add items to the cart and proceed to checkout.
+    -   Complete the payment process.
+    -   Verify that the order is created in the Supabase database.
+    -   Ensure that the order confirmation email is sent to the user.
 
-1. Upload a profile image in the dashboard
-2. Upload website images in the admin panel
-3. Verify files are stored and accessible
+4.  **Test Event Registrations:**
 
-## Security Considerations
-
-1. **Never expose secret keys** in client-side code
-2. **Use HTTPS** in production
-3. **Validate webhooks** using Stripe's signature verification
-4. **Implement proper authentication** for admin routes
-5. **Rate limit** API endpoints to prevent abuse
+    -   Register for an event and complete the payment process.
+    -   Verify that the event registration is created in the Supabase database.
+    -   Ensure that the event confirmation email is sent to the user.
 
 ## Troubleshooting
 
-### Common Issues
-
-1. **Stripe webhook failures**: Check that your webhook URL is accessible and returns 200
-2. **Email delivery issues**: Verify your domain is properly configured in Resend
-3. **Upload failures**: Check UploadThing file size limits and allowed file types
-4. **CORS errors**: Ensure your domain is properly configured in all services
-
-### Debug Mode
-
-Enable debug logging by adding:
-
-\`\`\`env
-DEBUG=stripe:*,resend:*
-\`\`\`
-
-## Support
-
-- Stripe: [stripe.com/docs](https://stripe.com/docs)
-- Resend: [resend.com/docs](https://resend.com/docs)
-- UploadThing: [docs.uploadthing.com](https://docs.uploadthing.com)
-
-For project-specific issues, check the application logs in Vercel dashboard.
-\`\`\`
-
-Now let me update the admin page to include session management:
+-   If you encounter any issues during deployment, check the Vercel logs for error messages.
+-   Ensure that all environment variables are set correctly in Vercel.
+-   Verify that the Stripe webhook is configured correctly and is listening for the required events.
+-   Check the Resend dashboard for any email delivery issues.

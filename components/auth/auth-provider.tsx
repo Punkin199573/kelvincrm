@@ -41,27 +41,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
   const [initialized, setInitialized] = useState(false)
   const { toast } = useToast()
+  let isMounted = true // Declare the mounted variable here
 
   const fetchProfile = useCallback(async (userId: string) => {
     try {
       const { data, error } = await supabase.from("profiles").select("*").eq("id", userId).single()
 
-      if (error && error.code !== "PGRST116") {
-        console.error("Error fetching profile:", error)
-        return null
+      if (error) {
+        if (error.code === "PGRST116") {
+          // Profile doesn't exist yet, this is normal for new users
+          console.log("Profile not found, user may be new")
+        } else {
+          console.error("Error fetching profile:", error)
+        }
+        setProfile(null)
+      } else {
+        setProfile(data)
       }
-
-      return data
     } catch (error) {
       console.error("Unexpected error fetching profile:", error)
-      return null
+      setProfile(null)
     }
   }, [])
 
   useEffect(() => {
-    let isMounted = true
-
-    const initAuth = async () => {
+    const initializeAuth = async () => {
       try {
         // Get current session
         const {
@@ -69,21 +73,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           error,
         } = await supabase.auth.getSession()
 
+        if (!isMounted) return
+
         if (error) {
           console.error("Session error:", error)
-          if (isMounted) {
-            setUser(null)
-            setProfile(null)
-            setLoading(false)
-            setInitialized(true)
-          }
+          setUser(null)
+          setProfile(null)
+          setLoading(false)
+          setInitialized(true)
           return
         }
 
-        if (session?.user && isMounted) {
-          setUser(session.user)
-          const profileData = await fetchProfile(session.user.id)
-          setProfile(profileData)
+        setUser(session?.user ?? null)
+
+        if (session?.user) {
+          await fetchProfile(session.user.id)
         }
 
         if (isMounted) {
@@ -102,7 +106,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     if (!initialized) {
-      initAuth()
+      initializeAuth()
     }
 
     // Listen for auth changes
@@ -111,23 +115,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!isMounted) return
 
-      console.log("Auth state change:", event)
+      console.log("Auth state change:", event, session?.user?.email)
 
-      if (event === "SIGNED_IN" && session?.user) {
-        setUser(session.user)
-        const profileData = await fetchProfile(session.user.id)
-        setProfile(profileData)
-        setLoading(false)
-      } else if (event === "SIGNED_OUT") {
-        setUser(null)
+      setUser(session?.user ?? null)
+
+      if (session?.user && event !== "SIGNED_OUT") {
+        await fetchProfile(session.user.id)
+      } else {
         setProfile(null)
+      }
+
+      if (initialized) {
         setLoading(false)
-      } else if (event === "TOKEN_REFRESHED" && session?.user) {
-        setUser(session.user)
-        if (!profile) {
-          const profileData = await fetchProfile(session.user.id)
-          setProfile(profileData)
-        }
       }
     })
 
@@ -140,6 +139,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signIn = async (email: string, password: string) => {
     try {
       setLoading(true)
+
       const { data, error } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password,
@@ -228,7 +228,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     try {
       const { error } = await supabase.auth.signOut()
-      if (error) throw error
+
+      if (error) {
+        throw error
+      }
+
+      setUser(null)
+      setProfile(null)
 
       toast({
         title: "Signed out",
@@ -250,7 +256,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         redirectTo: `${window.location.origin}/reset-password`,
       })
 
-      if (error) throw error
+      if (error) {
+        throw error
+      }
 
       toast({
         title: "Reset email sent",

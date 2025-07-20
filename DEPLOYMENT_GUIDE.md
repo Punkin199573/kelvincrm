@@ -1,199 +1,103 @@
-# Kelvin Creekman Fan Club - Deployment Guide
+# Deployment Guide
 
-## Environment Variables Setup
+This guide provides step-by-step instructions for deploying the Kelvin Creekman Fan Club website to Vercel.
 
-### Required Environment Variables
+## Prerequisites
 
-The following environment variables are already configured in your project:
+-   A Vercel account.
+-   A GitHub, GitLab, or Bitbucket account.
+-   The project code in a Git repository.
 
-#### Supabase Configuration
-\`\`\`env
-SUPABASE_URL=your_supabase_project_url
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
-SUPABASE_ANON_KEY=your_supabase_anon_key
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
-SUPABASE_JWT_SECRET=your_supabase_jwt_secret
-\`\`\`
+## Steps
 
-#### Database Configuration
-\`\`\`env
-POSTGRES_URL=your_postgres_connection_string
-POSTGRES_PRISMA_URL=your_postgres_prisma_connection_string
-POSTGRES_URL_NON_POOLING=your_postgres_non_pooling_connection_string
-POSTGRES_USER=your_postgres_user
-POSTGRES_PASSWORD=your_postgres_password
-POSTGRES_DATABASE=your_postgres_database
-POSTGRES_HOST=your_postgres_host
-\`\`\`
+1.  **Create a Vercel Project:**
 
-#### Stripe Configuration
-\`\`\`env
-STRIPE_SECRET_KEY=your_stripe_secret_key
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=your_stripe_publishable_key
-STRIPE_WEBHOOK_SECRET=your_stripe_webhook_secret
-STRIPE_FROST_FAN_PRICE_ID=your_frost_fan_price_id
-STRIPE_BLIZZARD_VIP_PRICE_ID=your_blizzard_vip_price_id
-STRIPE_AVALANCHE_BACKSTAGE_PRICE_ID=your_avalanche_backstage_price_id
-\`\`\`
+    -   Log in to your Vercel account.
+    -   Click on "Add New..." and select "Project".
+    -   Connect your Git repository by selecting the appropriate provider (GitHub, GitLab, or Bitbucket).
+    -   Choose the repository containing the Kelvin Creekman Fan Club website code.
 
-#### Email Configuration
-\`\`\`env
-RESEND_API_KEY=your_resend_api_key
-\`\`\`
+2.  **Configure Project Settings:**
 
-#### Application Configuration
-\`\`\`env
-NEXT_PUBLIC_BASE_URL=your_application_base_url
-\`\`\`
+    -   Vercel should automatically detect that the project is a Next.js application. If not, configure the following settings:
+        -   **Framework Preset:** `Next.js`
+        -   **Build Command:** `next build`
+        -   **Output Directory:** `.next`
 
-### Additional Environment Variables for UploadThing
+3.  **Add Environment Variables:**
 
-If you want to integrate UploadThing for file uploads, add these variables:
+    -   Navigate to the "Settings" tab of your Vercel project.
+    -   Select "Environment Variables" from the sidebar.
+    -   Add the following environment variables, ensuring that you use the correct values for your project:
 
-\`\`\`env
-UPLOADTHING_SECRET=your_uploadthing_secret
-UPLOADTHING_APP_ID=your_uploadthing_app_id
-\`\`\`
+        -   `NEXT_PUBLIC_SUPABASE_URL`: The URL of your Supabase project.
+        -   `NEXT_PUBLIC_SUPABASE_ANON_KEY`: The anonymous key for your Supabase project.
+        -   `SUPABASE_SERVICE_ROLE_KEY`: The service role key for your Supabase project.
+        -   `STRIPE_SECRET_KEY`: Your Stripe secret key.
+        -   `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`: Your Stripe publishable key.
+        -   `STRIPE_WEBHOOK_SECRET`: Your Stripe webhook secret.
+        -   `RESEND_API_KEY`: Your Resend API key.
+        -   `NEXT_PUBLIC_BASE_URL`: The base URL of your deployed website (e.g., `https://kelvincreekman.vercel.app`).
 
-## Admin User Setup
+4.  **Deploy the Project:**
 
-### Creating the Admin User
+    -   Click the "Deploy" button.
+    -   Vercel will automatically build and deploy your project.
+    -   Once the deployment is complete, you will receive a URL to access your live website.
 
-1. **Through Supabase Dashboard:**
-   - Go to your Supabase project dashboard
-   - Navigate to Authentication > Users
-   - Click "Add user"
-   - Email: `cloudyzaddy@gmail.com`
-   - Password: `KelvinAdmin2024!`
-   - Click "Add user"
+## Post-Deployment Setup
 
-2. **Run the Admin Setup Migration:**
-   \`\`\`bash
-   # After creating the user, run the migration to set admin privileges
-   npx supabase db push
-   \`\`\`
+1.  **Set Up Stripe Webhooks:**
 
-3. **Verify Admin Access:**
-   - Sign in with the admin credentials
-   - Navigate to `/admin` to access the admin dashboard
-   - Verify all admin features are working
+    -   In your Stripe dashboard, configure the webhook endpoint to point to your Vercel deployment URL (e.g., `https://kelvincreekman.vercel.app/api/webhooks/stripe`).
+    -   Ensure that the webhook is configured to listen for the following events:
+        -   `checkout.session.completed`
+        -   `payment_intent.succeeded`
+        -   `invoice.payment_succeeded`
+        -   `customer.subscription.created`
+        -   `customer.subscription.updated`
+        -   `customer.subscription.deleted`
+        -   `invoice.payment_failed`
 
-## Deployment Steps
+2.  **Configure Resend:**
 
-### 1. Vercel Deployment
+    -   Verify your domain in Resend.
+    -   Update the `RESEND_API_KEY` environment variable in Vercel with your Resend API key.
+    -   Ensure that your email templates are set up correctly in Resend.
 
-\`\`\`bash
-# Install Vercel CLI
-npm i -g vercel
+3.  **Set Up Admin User:**
 
-# Deploy to Vercel
-vercel
+    -   Follow the steps in the [Admin Setup Guide](ADMIN_SETUP.md) to create an admin user in your Supabase project.
 
-# Set environment variables in Vercel dashboard
-# Or use CLI:
-vercel env add SUPABASE_URL
-vercel env add NEXT_PUBLIC_SUPABASE_URL
-# ... add all other environment variables
-\`\`\`
+## Testing
 
-### 2. Database Setup
+1.  **Sign Up and Sign In:**
 
-\`\`\`bash
-# Run all migrations
-npx supabase db push
+    -   Ensure that users can successfully sign up and sign in to the website.
+    -   Verify that the welcome email is sent to new users.
 
-# Seed initial data (if needed)
-npx supabase db seed
-\`\`\`
+2.  **Test Membership Payments:**
 
-### 3. Stripe Webhook Setup
+    -   Sign up for a membership tier and complete the payment process.
+    -   Verify that the user's tier is updated in the Supabase database.
+    -   Ensure that the welcome email is sent to the user.
 
-1. Create webhook endpoint in Stripe dashboard
-2. Point to: `https://your-domain.com/api/webhooks/stripe`
-3. Select events: `checkout.session.completed`, `payment_intent.succeeded`
-4. Copy webhook secret to `STRIPE_WEBHOOK_SECRET`
+3.  **Test Store Purchases:**
 
-### 4. Email Setup (Resend)
+    -   Add items to the cart and proceed to checkout.
+    -   Complete the payment process.
+    -   Verify that the order is created in the Supabase database.
+    -   Ensure that the order confirmation email is sent to the user.
 
-1. Create account at resend.com
-2. Get API key
-3. Add to `RESEND_API_KEY` environment variable
-4. Verify email sending functionality
+4.  **Test Event Registrations:**
 
-## Mobile Responsiveness Features
-
-### Navigation
-- ✅ Hamburger menu for mobile devices
-- ✅ Mobile footer navigation
-- ✅ Touch-friendly interface
-- ✅ Responsive design across all screen sizes
-
-### Key Features
-- ✅ Mobile-optimized admin dashboard
-- ✅ Touch-friendly cart and checkout
-- ✅ Responsive event booking
-- ✅ Mobile-friendly video calls
-- ✅ Optimized image loading
-
-## Production Checklist
-
-### Before Deployment
-- [ ] All environment variables configured
-- [ ] Admin user created and tested
-- [ ] Stripe webhooks configured
-- [ ] Email functionality tested
-- [ ] Mobile responsiveness verified
-- [ ] All pages load without errors
-- [ ] Database migrations applied
-
-### After Deployment
-- [ ] Test admin login: `cloudyzaddy@gmail.com` / `KelvinAdmin2024!`
-- [ ] Verify all payment flows
-- [ ] Test email notifications
-- [ ] Check mobile navigation
-- [ ] Verify all API endpoints
-- [ ] Test real-time features
+    -   Register for an event and complete the payment process.
+    -   Verify that the event registration is created in the Supabase database.
+    -   Ensure that the event confirmation email is sent to the user.
 
 ## Troubleshooting
 
-### Common Issues
-
-1. **Admin Access Denied**
-   - Verify user exists in Supabase Auth
-   - Check `is_admin` flag in profiles table
-   - Ensure RLS policies are correct
-
-2. **Mobile Navigation Not Working**
-   - Check if JavaScript is enabled
-   - Verify responsive CSS classes
-   - Test on different devices/browsers
-
-3. **Payment Issues**
-   - Verify Stripe keys are correct
-   - Check webhook endpoint is accessible
-   - Ensure HTTPS is enabled
-
-4. **Database Connection Issues**
-   - Verify connection strings
-   - Check Supabase project status
-   - Ensure database is accessible
-
-## Support
-
-For deployment issues or questions:
-1. Check the console for error messages
-2. Verify all environment variables are set
-3. Test individual features in development
-4. Contact support if issues persist
-
-## Security Notes
-
-- Never commit environment variables to version control
-- Use strong passwords for admin accounts
-- Enable 2FA where possible
-- Regularly update dependencies
-- Monitor for security vulnerabilities
-\`\`\`
-
-Finally, let me ensure the cart context is properly handling undefined states:
+-   If you encounter any issues during deployment, check the Vercel logs for error messages.
+-   Ensure that all environment variables are set correctly in Vercel.
+-   Verify that the Stripe webhook is configured correctly and is listening for the required events.
+-   Check the Resend dashboard for any email delivery issues.
