@@ -46,7 +46,7 @@ export default function DashboardPage() {
   // Show loading while checking authentication
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-muted/20">
         <div className="text-center space-y-4">
           <Loader2 className="h-8 w-8 animate-spin mx-auto" />
           <p className="text-muted-foreground">Loading your dashboard...</p>
@@ -58,7 +58,7 @@ export default function DashboardPage() {
   // Redirect if not authenticated
   if (!user) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-muted/20">
         <div className="text-center space-y-4">
           <p className="text-muted-foreground">Redirecting to login...</p>
           <Loader2 className="h-6 w-6 animate-spin mx-auto" />
@@ -74,21 +74,25 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-8 max-w-7xl">
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-          <div>
-            <h1 className="text-4xl font-extrabold tracking-tight lg:text-5xl">
+          <div className="flex-1">
+            <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
               Welcome, {profile?.full_name || user?.email?.split("@")[0] || "User"}!
             </h1>
-            <p className="text-muted-foreground text-lg mt-2">Your personalized dashboard awaits.</p>
+            <p className="text-muted-foreground text-base sm:text-lg mt-2">Your personalized dashboard awaits.</p>
           </div>
-          <div className="flex items-center gap-4">
-            <Button variant="outline" className="flex items-center gap-2 bg-transparent">
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            <Button variant="outline" className="flex items-center gap-2 flex-1 sm:flex-none bg-transparent">
               <Settings className="h-4 w-4" />
               Settings
             </Button>
-            <Button variant="destructive" onClick={handleSignOut} className="flex items-center gap-2">
+            <Button
+              variant="destructive"
+              onClick={handleSignOut}
+              className="flex items-center gap-2 flex-1 sm:flex-none"
+            >
               <LogOut className="h-4 w-4" />
               Sign Out
             </Button>
@@ -96,34 +100,41 @@ export default function DashboardPage() {
         </div>
 
         {/* User Profile Card */}
-        <Card className="mb-8 shadow-lg">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-2xl font-bold flex items-center gap-2">
-              <User className="h-6 w-6 text-primary" />
-              Your Profile
+        <Card className="mb-8 shadow-lg border-primary/20">
+          <CardHeader className="pb-4">
+            <CardTitle className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
+                  <User className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold">{profile?.full_name || user?.email}</h3>
+                  <p className="text-sm text-muted-foreground">{user?.email}</p>
+                </div>
+              </div>
+              <Badge className={`${tierColor} text-white px-3 py-1 rounded-full flex items-center gap-1`}>
+                <TierIcon className="h-4 w-4" />
+                {tierName}
+              </Badge>
             </CardTitle>
-            <Badge className={`${tierColor} text-white px-3 py-1 rounded-full flex items-center gap-1`}>
-              <TierIcon className="h-4 w-4" />
-              {tierName}
-            </Badge>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="text-center p-4 bg-muted/50 rounded-lg">
                 <p className="text-sm font-medium text-muted-foreground">Full Name</p>
-                <p className="text-lg font-semibold">{profile?.full_name || "N/A"}</p>
+                <p className="text-base font-semibold truncate">{profile?.full_name || "N/A"}</p>
               </div>
-              <div>
+              <div className="text-center p-4 bg-muted/50 rounded-lg">
                 <p className="text-sm font-medium text-muted-foreground">Email</p>
-                <p className="text-lg font-semibold">{user?.email || "N/A"}</p>
+                <p className="text-base font-semibold truncate">{user?.email || "N/A"}</p>
               </div>
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Membership Status</p>
-                <p className="text-lg font-semibold capitalize">{profile?.subscription_status || "N/A"}</p>
+              <div className="text-center p-4 bg-muted/50 rounded-lg">
+                <p className="text-sm font-medium text-muted-foreground">Status</p>
+                <p className="text-base font-semibold capitalize">{profile?.subscription_status || "N/A"}</p>
               </div>
-              <div>
+              <div className="text-center p-4 bg-muted/50 rounded-lg">
                 <p className="text-sm font-medium text-muted-foreground">Member Since</p>
-                <p className="text-lg font-semibold">
+                <p className="text-base font-semibold">
                   {profile?.created_at ? new Date(profile.created_at).toLocaleDateString() : "N/A"}
                 </p>
               </div>

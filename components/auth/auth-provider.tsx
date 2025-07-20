@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { createContext, useContext, useEffect, useState } from "react"
+import { createContext, useContext, useEffect, useState, useCallback } from "react"
 import type { User } from "@supabase/supabase-js"
 import { supabase } from "@/lib/supabase/client"
 import { useToast } from "@/hooks/use-toast"
@@ -39,9 +39,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
+  const [initialized, setInitialized] = useState(false)
   const { toast } = useToast()
 
-  const fetchProfile = async (userId: string) => {
+  const fetchProfile = useCallback(async (userId: string) => {
     try {
       const { data, error } = await supabase.from("profiles").select("*").eq("id", userId).single()
 
@@ -55,7 +56,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error("Unexpected error fetching profile:", error)
       return null
     }
-  }
+  }, [])
 
   useEffect(() => {
     let isMounted = true
@@ -74,6 +75,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setUser(null)
             setProfile(null)
             setLoading(false)
+            setInitialized(true)
           }
           return
         }
@@ -86,6 +88,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (isMounted) {
           setLoading(false)
+          setInitialized(true)
         }
       } catch (error) {
         console.error("Auth initialization error:", error)
@@ -93,11 +96,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(null)
           setProfile(null)
           setLoading(false)
+          setInitialized(true)
         }
       }
     }
 
-    initAuth()
+    if (!initialized) {
+      initAuth()
+    }
 
     // Listen for auth changes
     const {
@@ -129,16 +135,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isMounted = false
       subscription.unsubscribe()
     }
-  }, [])
+  }, [initialized, fetchProfile, profile])
 
   const signIn = async (email: string, password: string) => {
     try {
+      setLoading(true)
       const { data, error } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password,
       })
 
       if (error) {
+        setLoading(false)
         return { error }
       }
 
@@ -147,17 +155,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           title: "Welcome back!",
           description: "You have successfully signed in.",
         })
+        // Loading will be set to false by the auth state change listener
+        return { error: null }
       }
 
-      return { error: null }
+      setLoading(false)
+      return { error: new Error("Unknown error occurred") }
     } catch (error: any) {
       console.error("Sign in error:", error)
+      setLoading(false)
       return { error }
     }
   }
 
   const signUp = async (email: string, password: string, userData: { full_name: string; membership_tier: string }) => {
     try {
+      setLoading(true)
       const { data, error } = await supabase.auth.signUp({
         email: email.trim(),
         password,
@@ -170,6 +183,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       })
 
       if (error) {
+        setLoading(false)
         return { error }
       }
 
@@ -179,6 +193,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             title: "Check your email",
             description: "We've sent you a confirmation link to complete your registration.",
           })
+          setLoading(false)
+          return { error: null }
         } else {
           // Create profile if user is immediately confirmed
           await supabase.from("profiles").insert({
@@ -195,12 +211,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             title: "Account created!",
             description: "Your account has been created successfully.",
           })
+          // Loading will be set to false by the auth state change listener
+          return { error: null }
         }
       }
 
-      return { error: null }
+      setLoading(false)
+      return { error: new Error("Unknown error occurred") }
     } catch (error: any) {
       console.error("Sign up error:", error)
+      setLoading(false)
       return { error }
     }
   }
