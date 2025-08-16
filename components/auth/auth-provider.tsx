@@ -14,6 +14,7 @@ export interface Profile {
   subscription_status?: string
   stripe_customer_id?: string
   stripe_subscription_id?: string
+  is_admin?: boolean
   created_at?: string
   updated_at?: string
 }
@@ -41,7 +42,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
   const [initialized, setInitialized] = useState(false)
   const { toast } = useToast()
-  let isMounted = true // Declare the mounted variable here
 
   const fetchProfile = useCallback(async (userId: string) => {
     try {
@@ -65,6 +65,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   useEffect(() => {
+    let isMounted = true
+
     const initializeAuth = async () => {
       try {
         // Get current session
@@ -134,7 +136,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isMounted = false
       subscription.unsubscribe()
     }
-  }, [initialized, fetchProfile, profile])
+  }, [initialized, fetchProfile])
 
   const signIn = async (email: string, password: string) => {
     try {
@@ -285,8 +287,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .eq("id", user.id)
 
       if (!error) {
-        const updatedProfile = await fetchProfile(user.id)
-        setProfile(updatedProfile)
+        await fetchProfile(user.id)
       }
 
       return { error }
