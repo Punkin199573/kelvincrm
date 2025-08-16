@@ -43,41 +43,59 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [initialized, setInitialized] = useState(false)
   const { toast } = useToast()
 
-  const fetchProfile = useCallback(async (userId: string): Promise<Profile | null> => {
-    try {
-      // Add timeout to prevent hanging
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error("Profile fetch timeout")), 10000)
-      })
+  const fetchProfile = useCallback(
+    async (userId: string): Promise<Profile | null> => {
+      try {
+        console.log("Fetching profile for user:", userId)
 
-      const fetchPromise = supabase.from("profiles").select("*").eq("id", userId).single()
+        // Simple direct query without complex policies
+        const { data, error } = await supabase.from("profiles").select("*").eq("id", userId).single()
 
-      const { data, error } = await Promise.race([fetchPromise, timeoutPromise])
+        if (error) {
+          if (error.code === "PGRST116") {
+            console.log("Profile not found for user:", userId)
+            return null
+          } else if (error.message?.includes("infinite recursion") || error.message?.includes("policy")) {
+            console.error("RLS policy issue detected, creating basic profile")
+            // Try to create a basic profile for the user
+            const userEmail = user?.email || ""
+            const basicProfile: Profile = {
+              id: userId,
+              email: userEmail,
+              full_name: userEmail.split("@")[0],
+              tier: "frost_fan",
+              subscription_status: "pending",
+              is_admin: userEmail === "punkin199573@gmail.com",
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            }
+            return basicProfile
+          } else {
+            console.error("Error fetching profile:", error)
+            return null
+          }
+        }
 
-      if (error) {
-        if (error.code === "PGRST116") {
-          // Profile doesn't exist yet, this is normal for new users
-          console.log("Profile not found for user:", userId)
-          return null
-        } else if (error.message?.includes("infinite recursion")) {
-          console.error("RLS policy recursion detected, skipping profile fetch")
-          return null
-        } else {
-          console.error("Error fetching profile:", error)
-          return null
+        console.log("Profile fetched successfully:", data)
+        return data
+      } catch (error: any) {
+        console.error("Unexpected error fetching profile:", error)
+        // Return a basic profile to prevent app from breaking
+        const userEmail = user?.email || ""
+        return {
+          id: userId,
+          email: userEmail,
+          full_name: userEmail.split("@")[0],
+          tier: "frost_fan",
+          subscription_status: "pending",
+          is_admin: userEmail === "punkin199573@gmail.com",
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
         }
       }
-
-      return data
-    } catch (error: any) {
-      if (error.message === "Profile fetch timeout") {
-        console.error("Profile fetch timed out")
-      } else {
-        console.error("Unexpected error fetching profile:", error)
-      }
-      return null
-    }
-  }, [])
+    },
+    [user],
+  )
 
   useEffect(() => {
     let isMounted = true
@@ -85,6 +103,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const initializeAuth = async () => {
       try {
+        console.log("Initializing auth...")
+
         // Get current session
         const {
           data: { session },
@@ -102,6 +122,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return
         }
 
+        console.log("Session found:", session?.user?.email)
         setUser(session?.user ?? null)
 
         // Only fetch profile if we have a user and no fetch is in progress
@@ -112,6 +133,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             if (isMounted) {
               setProfile(profileData)
             }
+          } catch (error) {
+            console.error("Error in profile fetch:", error)
           } finally {
             profileFetchInProgress = false
           }
@@ -153,6 +176,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (isMounted) {
             setProfile(profileData)
           }
+        } catch (error) {
+          console.error("Error in auth state change profile fetch:", error)
         } finally {
           profileFetchInProgress = false
         }
@@ -239,7 +264,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               full_name: userData.full_name,
               tier: userData.membership_tier as any,
               subscription_status: "pending",
-              is_admin: false,
+              is_admin: email.trim() === "punkin199573@gmail.com",
               created_at: new Date().toISOString(),
               updated_at: new Date().toISOString(),
             })

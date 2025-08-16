@@ -1,31 +1,36 @@
 # Admin Setup Instructions
 
 ## 🔐 Admin Credentials
-- **Email**: `admin@example.com`
-- **Password**: `adminpassword`
+- **Email**: punkin199573@gmail.com
+- **Password**: Benefitpay
 
 ## 📋 Setup Steps
 
-### 1. Database Migration
-Run the database migrations to set up the admin user and fix RLS policies:
+### 1. Create Admin User in Supabase
+Since we cannot directly create auth users from SQL migrations, you need to:
 
-\`\`\`bash
-# Apply all migrations
-supabase db push
+1. Go to your Supabase Dashboard
+2. Navigate to Authentication > Users
+3. Click "Add User"
+4. Enter:
+   - Email: punkin199573@gmail.com
+   - Password: Benefitpay
+   - Email Confirm: true (check this box)
 
-# Or run specific migrations
-supabase migration up
+### 2. Run Database Migrations
+Execute the following SQL scripts in your Supabase SQL Editor:
+
+\`\`\`sql
+-- Run this to fix RLS policies and create admin profile
+-- Copy and paste the content from scripts/fix-rls-policies.sql
 \`\`\`
 
-### 2. Admin Account Creation
-1. Navigate to your website's signup page: `/signup`
-2. Create an account with:
-   - Email: `admin@example.com`
-   - Password: `adminpassword`
-3. Verify the email address
-4. Admin status will be automatically assigned via database trigger
+### 3. Verify Admin Access
+1. Try logging in with the admin credentials
+2. Navigate to `/admin` to verify admin panel access
+3. Check that the profile shows `is_admin: true`
 
-### 3. Environment Variables
+### 4. Environment Variables
 Ensure these environment variables are set in your `.env.local`:
 
 \`\`\`env
@@ -55,13 +60,13 @@ UPLOADTHING_APP_ID=your_uploadthing_app_id
 NEXT_PUBLIC_BASE_URL=https://your-domain.com
 \`\`\`
 
-### 4. Stripe Setup
+### 5. Stripe Setup
 1. Create products in Stripe Dashboard for each membership tier
 2. Copy the price IDs to your environment variables
 3. Set up webhook endpoint: `https://your-domain.com/api/webhooks/stripe`
 4. Configure webhook events (see WEBHOOK_SETUP.md)
 
-### 5. UploadThing Setup
+### 6. UploadThing Setup
 1. Create account at uploadthing.com
 2. Create new app and get API keys
 3. Add keys to environment variables
@@ -79,12 +84,12 @@ Once logged in as admin, you'll have access to:
 - **User Management**: View and manage user accounts
 
 ### Key Admin Functions
-- Create and edit events
-- Manage product catalog
-- Upload images with UploadThing
-- Schedule meet & greet sessions
-- View order history
-- Manage user tiers and permissions
+- Full access to all user profiles
+- Product management
+- Event management
+- Content management
+- Order management
+- Analytics dashboard
 
 ## 🔧 Troubleshooting
 
@@ -95,14 +100,14 @@ If admin status isn't automatically assigned:
 \`\`\`sql
 UPDATE profiles 
 SET is_admin = true 
-WHERE email = 'admin@example.com';
+WHERE email = 'punkin199573@gmail.com';
 \`\`\`
 
 ### RLS Policy Issues
 If you encounter permission errors:
-1. Ensure all migrations have been applied
-2. Check that the user is properly authenticated
-3. Verify admin policies are in place
+1. Run the `scripts/fix-rls-policies.sql` script
+2. Make sure the admin user exists in auth.users
+3. Verify the profile has `is_admin: true`
 
 ### Upload Issues
 If image uploads fail:
@@ -136,16 +141,16 @@ If you encounter any issues during setup, check the console logs and database fo
 
 2.  **Create an Admin User:**
 
-    -   Run the following SQL query to create an admin user. Replace `'admin@example.com'` and `'adminpassword'` with the desired email and password for the admin user.
+    -   Run the following SQL query to create an admin user. Replace `'punkin199573@gmail.com'` and `'Benefitpay'` with the desired email and password for the admin user.
 
     \`\`\`sql
     INSERT INTO auth.users (email, raw_app_meta_data)
-    VALUES ('admin@example.com', '{"is_admin": true}');
+    VALUES ('punkin199573@gmail.com', '{"is_admin": true}');
 
     -- Hash the password using pgcrypto
     UPDATE auth.users
-    SET encrypted_password = crypt('adminpassword', gen_salt('bf'))
-    WHERE email = 'admin@example.com';
+    SET encrypted_password = crypt('Benefitpay', gen_salt('bf'))
+    WHERE email = 'punkin199573@gmail.com';
     \`\`\`
 
 3.  **Update the `profiles` Table:**
@@ -155,8 +160,8 @@ If you encounter any issues during setup, check the console logs and database fo
     \`\`\`sql
     INSERT INTO public.profiles (id, email, full_name, is_admin, created_at, updated_at)
     VALUES (
-        (SELECT id FROM auth.users WHERE email = 'admin@example.com'),
-        'admin@example.com',
+        (SELECT id FROM auth.users WHERE email = 'punkin199573@gmail.com'),
+        'punkin199573@gmail.com',
         'Admin User',
         TRUE,
         NOW(),
