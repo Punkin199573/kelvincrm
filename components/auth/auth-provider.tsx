@@ -43,29 +43,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [initialized, setInitialized] = useState(false)
   const { toast } = useToast()
 
-  const fetchProfile = useCallback(async (userId: string) => {
+  const fetchProfile = useCallback(async (userId: string): Promise<Profile | null> => {
     try {
-      const { data, error } = await supabase.from("profiles").select("*").eq("id", userId).single()
+      // Add timeout to prevent hanging
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error("Profile fetch timeout")), 10000)
+      })
+
+      const fetchPromise = supabase.from("profiles").select("*").eq("id", userId).single()
+
+      const { data, error } = await Promise.race([fetchPromise, timeoutPromise])
 
       if (error) {
         if (error.code === "PGRST116") {
           // Profile doesn't exist yet, this is normal for new users
-          console.log("Profile not found, user may be new")
+          console.log("Profile not found for user:", userId)
+          return null
+        } else if (error.message?.includes("infinite recursion")) {
+          console.error("RLS policy recursion detected, skipping profile fetch")
+          return null
         } else {
           console.error("Error fetching profile:", error)
+          return null
         }
-        setProfile(null)
-      } else {
-        setProfile(data)
       }
-    } catch (error) {
-      console.error("Unexpected error fetching profile:", error)
-      setProfile(null)
+
+      return data
+    } catch (error: any) {
+      if (error.message === "Profile fetch timeout") {
+        console.error("Profile fetch timed out")
+      } else {
+        console.error("Unexpected error fetching profile:", error)
+      }
+      return null
     }
   }, [])
 
   useEffect(() => {
     let isMounted = true
+    let profileFetchInProgress = false
 
     const initializeAuth = async () => {
       try {
@@ -88,8 +104,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         setUser(session?.user ?? null)
 
-        if (session?.user) {
-          await fetchProfile(session.user.id)
+        // Only fetch profile if we have a user and no fetch is in progress
+        if (session?.user && !profileFetchInProgress) {
+          profileFetchInProgress = true
+          try {
+            const profileData = await fetchProfile(session.user.id)
+            if (isMounted) {
+              setProfile(profileData)
+            }
+          } finally {
+            profileFetchInProgress = false
+          }
         }
 
         if (isMounted) {
@@ -121,13 +146,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       setUser(session?.user ?? null)
 
-      if (session?.user && event !== "SIGNED_OUT") {
-        await fetchProfile(session.user.id)
-      } else {
+      if (session?.user && event !== "SIGNED_OUT" && !profileFetchInProgress) {
+        profileFetchInProgress = true
+        try {
+          const profileData = await fetchProfile(session.user.id)
+          if (isMounted) {
+            setProfile(profileData)
+          }
+        } finally {
+          profileFetchInProgress = false
+        }
+      } else if (event === "SIGNED_OUT") {
         setProfile(null)
       }
 
-      if (initialized) {
+      if (initialized && isMounted) {
         setLoading(false)
       }
     })
@@ -199,15 +232,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return { error: null }
         } else {
           // Create profile if user is immediately confirmed
-          await supabase.from("profiles").insert({
-            id: data.user.id,
-            email: email.trim(),
-            full_name: userData.full_name,
-            tier: userData.membership_tier as any,
-            subscription_status: "pending",
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          })
+          try {
+            await supabase.from("profiles").insert({
+              id: data.user.id,
+              email: email.trim(),
+              full_name: userData.full_name,
+              tier: userData.membership_tier as any,
+              subscription_status: "pending",
+              is_admin: false,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            })
+          } catch (profileError) {
+            console.error("Error creating profile:", profileError)
+            // Don't fail the signup if profile creation fails
+          }
 
           toast({
             title: "Account created!",
@@ -287,7 +326,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .eq("id", user.id)
 
       if (!error) {
-        await fetchProfile(user.id)
+        const updatedProfile = await fetchProfile(user.id)
+        setProfile(updatedProfile)
       }
 
       return { error }

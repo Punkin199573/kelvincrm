@@ -219,16 +219,35 @@ export const dbHelpers = {
   // Get user profile safely without recursion
   async getUserProfile(userId: string): Promise<Profile | null> {
     try {
-      const { data, error } = await supabase.from("profiles").select("*").eq("id", userId).single()
+      // Add timeout to prevent hanging
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error("Database query timeout")), 10000)
+      })
+
+      const queryPromise = supabase.from("profiles").select("*").eq("id", userId).single()
+
+      const { data, error } = await Promise.race([queryPromise, timeoutPromise])
 
       if (error) {
-        console.error("Error fetching user profile:", error)
-        return null
+        if (error.code === "PGRST116") {
+          // Profile doesn't exist
+          return null
+        } else if (error.message?.includes("infinite recursion")) {
+          console.error("RLS policy recursion detected")
+          return null
+        } else {
+          console.error("Error fetching user profile:", error)
+          return null
+        }
       }
 
       return data
-    } catch (error) {
-      console.error("Unexpected error fetching user profile:", error)
+    } catch (error: any) {
+      if (error.message === "Database query timeout") {
+        console.error("Profile query timed out")
+      } else {
+        console.error("Unexpected error fetching user profile:", error)
+      }
       return null
     }
   },
